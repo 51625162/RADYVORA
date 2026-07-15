@@ -27,18 +27,11 @@ let rvCompaniesUnsub = null;
 let rvSettingsUnsub = null;
 
 function rvCompaniesRef() {
-  if (typeof RV_DEMO_MODE !== 'undefined' && RV_DEMO_MODE) {
-    return rvCreateLocalCollection('radyvora_demo_companies');
-  }
-  if (!rvCurrentUser) return null;
-  return rvDb.collection('users').doc(rvCurrentUser.uid).collection('companies');
+  // Şu an tek kullanıcı modundasın — veriler her zaman bu cihazda saklanır.
+  return rvCreateLocalCollection('radyvora_demo_companies');
 }
 function rvSettingsRef() {
-  if (typeof RV_DEMO_MODE !== 'undefined' && RV_DEMO_MODE) {
-    return rvCreateLocalDoc('radyvora_demo_settings');
-  }
-  if (!rvCurrentUser) return null;
-  return rvDb.collection('users').doc(rvCurrentUser.uid).collection('settings').doc('portfolio');
+  return rvCreateLocalDoc('radyvora_demo_settings');
 }
 
 function rvStartListening() {
