@@ -26,13 +26,18 @@ const firebaseConfig = {
 
 /* ------------------------------------------------------------
    TEST MODU
-   Firebase bilgilerini henüz doldurmadıysan (yukarıdaki alanlar
-   hâlâ "BURAYA_..." ise) site giriş ekranını atlar, verileri
-   SADECE BU TARAYICIDA (localStorage) saklar. Bu satır en başta
-   ve hiçbir şeye bağımlı olmadan hesaplanır — Firebase tarafında
-   bir hata olsa bile Test Modu tespiti bundan etkilenmez.
+   Gerçek bir Firebase apiKey'i her zaman "AIza" ile başlar ve
+   uzun bir karakter dizisidir. Yukarıdaki alan hâlâ placeholder
+   ise (ya da herhangi bir sebeple bozulmuş/eksikse) bu desene
+   uymaz — bu yüzden "BURAYA_..." metnini birebir aramak yerine
+   gerçek bir anahtara BENZEYİP BENZEMEDİĞİNİ kontrol ediyoruz.
+   Bu, placeholder metninde ufak bir yazım/otomatik düzeltme farkı
+   olsa bile Test Modu'nun doğru çalışmasını garanti eder.
 ------------------------------------------------------------ */
-const RV_DEMO_MODE = !firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf('BURAYA_') === 0;
+function rvLooksLikeRealApiKey(key) {
+  return typeof key === 'string' && /^AIza[A-Za-z0-9_-]{20,}$/.test(key.trim());
+}
+const RV_DEMO_MODE = !rvLooksLikeRealApiKey(firebaseConfig.apiKey);
 
 let rvAuth = null;
 let rvDb = null;
