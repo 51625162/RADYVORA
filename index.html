@@ -93,6 +93,55 @@
   </div>
 </section>
 
+<section class="macro-radar" aria-label="Ekonomik Radar">
+  <div class="panel">
+    <div class="panel__head">
+      <h2>Ekonomik Radar</h2>
+      <button type="button" id="refreshDovizBtn" class="btn btn--ghost">↻ Kurları Güncelle</button>
+    </div>
+    <p class="hint">🔄 işaretli olanlar otomatik çekilir (frankfurter.app, ücretsiz, anahtar gerekmez). ✍️ işaretli olanlar TCMB EVDS/TÜİK'in tarayıcıdan güvenli çekilememesi nedeniyle elle girilir.</p>
+
+    <div class="macro-grid">
+      <div class="macro-item">
+        <span class="macro-badge macro-badge--auto">🔄 Otomatik</span>
+        <span class="macro-label">USD/TRY</span>
+        <span class="macro-value" id="macroUsd">—</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-badge macro-badge--auto">🔄 Otomatik</span>
+        <span class="macro-label">EUR/TRY</span>
+        <span class="macro-value" id="macroEur">—</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-badge macro-badge--manual">✍️ Manuel</span>
+        <span class="macro-label">TÜFE Yıllık (%)</span>
+        <input type="number" step="any" id="m_tufe" class="macro-input">
+      </div>
+      <div class="macro-item">
+        <span class="macro-badge macro-badge--manual">✍️ Manuel</span>
+        <span class="macro-label">Politika Faizi (%)</span>
+        <input type="number" step="any" id="m_faiz" class="macro-input">
+      </div>
+      <div class="macro-item">
+        <span class="macro-badge macro-badge--manual">✍️ Manuel</span>
+        <span class="macro-label">CDS (5 yıllık)</span>
+        <input type="number" step="any" id="m_cds" class="macro-input">
+      </div>
+      <div class="macro-item">
+        <span class="macro-badge macro-badge--manual">✍️ Manuel</span>
+        <span class="macro-label">İmalat PMI</span>
+        <input type="number" step="any" id="m_pmi" class="macro-input">
+      </div>
+    </div>
+
+    <div class="macro-footer">
+      <span id="macroUpdated" class="muted-note"></span>
+      <button type="button" id="saveMacroBtn" class="btn btn--brass">Manuel Verileri Kaydet</button>
+    </div>
+    <p id="macroError" class="login-error" hidden></p>
+  </div>
+</section>
+
 <main class="workspace">
 
   <!-- LEFT: Company ledger + data entry -->

@@ -63,6 +63,17 @@ function rvStartListening() {
         els.bm_bist_baslangic.value = state.benchmark.bist100Baslangic ?? '';
         els.bm_bist_guncel.value = state.benchmark.bist100Guncel ?? '';
       }
+      if (els.m_tufe) {
+        els.m_tufe.value = state.benchmark.m_tufe ?? '';
+        els.m_faiz.value = state.benchmark.m_faiz ?? '';
+        els.m_cds.value = state.benchmark.m_cds ?? '';
+        els.m_pmi.value = state.benchmark.m_pmi ?? '';
+        if (els.macroUpdated) {
+          els.macroUpdated.textContent = state.benchmark.macroUpdatedAt
+            ? `Manuel veriler son güncelleme: ${state.benchmark.macroUpdatedAt}`
+            : '';
+        }
+      }
       renderPortfolioSummary();
     },
     (err) => console.error('RADYVORA: Ayarlar okunamadı', err)
@@ -89,6 +100,50 @@ window.rvOnAuthClear = function () {
   if (!els.companyList) cacheEls();
   rvStopListening();
 };
+
+/* ================================================================
+   EKONOMİK RADAR — Döviz kurları (GERÇEKTEN otomatik, ücretsiz)
+   Kaynak: frankfurter.app — anahtar gerektirmez, tarayıcıdan
+   doğrudan çağrılabilir (CORS destekli). TÜFE/faiz/CDS/PMI için
+   TCMB EVDS'nin tarayıcıdan güvenli/CORS'lu çağrılabildiğine dair
+   bir garanti yok, bu yüzden onlar bilinçli olarak manuel bırakıldı.
+================================================================ */
+async function rvFetchDovizKurlari() {
+  if (els.macroError) els.macroError.hidden = true;
+  try {
+    const [usdRes, eurRes] = await Promise.all([
+      fetch('https://api.frankfurter.app/latest?from=USD&to=TRY'),
+      fetch('https://api.frankfurter.app/latest?from=EUR&to=TRY')
+    ]);
+    if (!usdRes.ok || !eurRes.ok) throw new Error('Kur servisi yanıt vermedi');
+    const usdData = await usdRes.json();
+    const eurData = await eurRes.json();
+    const usdTry = usdData.rates && usdData.rates.TRY;
+    const eurTry = eurData.rates && eurData.rates.TRY;
+    if (els.macroUsd) els.macroUsd.textContent = Number.isFinite(usdTry) ? usdTry.toFixed(4) + ' ₺' : '—';
+    if (els.macroEur) els.macroEur.textContent = Number.isFinite(eurTry) ? eurTry.toFixed(4) + ' ₺' : '—';
+  } catch (e) {
+    console.error('RADYVORA: Döviz kuru çekilemedi', e);
+    if (els.macroUsd) els.macroUsd.textContent = '—';
+    if (els.macroEur) els.macroEur.textContent = '—';
+    if (els.macroError) {
+      els.macroError.hidden = false;
+      els.macroError.textContent = 'Döviz kurları çekilemedi — internet bağlantını kontrol et ve "Kurları Güncelle"ye tekrar bas.';
+    }
+  }
+}
+
+function handleSaveMacro() {
+  const ref = rvSettingsRef();
+  if (!ref) return;
+  const num = (id) => { const v = document.getElementById(id).value; return v === '' ? null : parseFloat(v); };
+  const today = new Date().toLocaleDateString('tr-TR');
+  const data = {
+    m_tufe: num('m_tufe'), m_faiz: num('m_faiz'), m_cds: num('m_cds'), m_pmi: num('m_pmi'),
+    macroUpdatedAt: today
+  };
+  ref.set(data, { merge: true }).catch((err) => alert('Kaydedilemedi: ' + err.message));
+}
 
 /* ================================================================
    TÜRETİLMİŞ DEĞERLER (fiyat/hisse verisinden hesaplananlar)
@@ -420,7 +475,9 @@ function cacheEls() {
     'kapRaporPanel', 'kapRaporList', 'kapRaporEntries', 'addKapRaporBtn',
     'editBenchmarkBtn', 'benchmarkForm', 'saveBenchmarkBtn', 'bm_bist_baslangic', 'bm_bist_guncel',
     'pfTotalCost', 'pfTotalValue', 'pfPnl', 'pfVsBenchmark', 'pfEmptyNote',
-    'sectorBalance', 'sectorBars', 'sectorNarrative'
+    'sectorBalance', 'sectorBars', 'sectorNarrative',
+    'refreshDovizBtn', 'macroUsd', 'macroEur', 'm_tufe', 'm_faiz', 'm_cds', 'm_pmi',
+    'macroUpdated', 'saveMacroBtn', 'macroError'
   ].forEach(id => { els[id] = document.getElementById(id); });
 }
 
@@ -836,6 +893,10 @@ function init() {
     els.benchmarkForm.hidden = !els.benchmarkForm.hidden;
   });
   els.saveBenchmarkBtn.addEventListener('click', handleSaveBenchmark);
+
+  els.refreshDovizBtn.addEventListener('click', rvFetchDovizKurlari);
+  els.saveMacroBtn.addEventListener('click', handleSaveMacro);
+  rvFetchDovizKurlari();
 }
 
 document.addEventListener('DOMContentLoaded', init);

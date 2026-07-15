@@ -611,6 +611,64 @@ a{ color: var(--brass); }
 }
 .login-note{ margin-top: 12px; }
 
+/* ---------- Macro Radar ---------- */
+.macro-radar{
+  max-width: 1180px;
+  margin: 20px auto 0;
+  padding: 0 24px;
+}
+.macro-grid{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 14px 0;
+}
+@media (max-width: 760px){
+  .macro-grid{ grid-template-columns: repeat(2, 1fr); }
+}
+.macro-item{
+  border: 1px solid var(--line);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.macro-badge{
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  width: fit-content;
+}
+.macro-badge--auto{ color: var(--green); }
+.macro-badge--manual{ color: var(--text-dim); }
+.macro-label{
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.macro-value{
+  font-family: var(--font-mono);
+  font-size: 20px;
+  color: var(--brass);
+}
+.macro-input{
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 7px 8px;
+  font-family: var(--font-mono);
+  font-size: 15px;
+}
+.macro-footer{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .site-footer{
   max-width: 1180px;
   margin: 8px auto 40px;
