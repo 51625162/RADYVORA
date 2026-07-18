@@ -246,87 +246,193 @@
 
       <details id="accordion-1" class="accordion" open>
         <summary>1 · Özet Bilanço &amp; Gelir Tablosu — Bu Çeyrek / Önceki Çeyrek</summary>
-        <div class="grid-2 grid-header">
-          <span></span><span class="col-label">Bu Çeyrek</span><span class="col-label">Önceki Çeyrek</span>
-        </div>
         <p class="hint" style="margin-top:0;">Gelir Tablosu</p>
-        <div class="grid-2">
-          <label>Net Satışlar (mn ₺)</label>
-          <input type="number" step="any" id="f_satis_bu">
-          <input type="number" step="any" id="f_satis_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Net Satışlar (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_satis_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_satis_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>Brüt Kâr (mn ₺)</label>
-          <input type="number" step="any" id="f_brut_kar_bu">
-          <input type="number" step="any" id="f_brut_kar_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Brüt Kâr (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_brut_kar_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_brut_kar_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>FAVÖK (mn ₺)</label>
-          <input type="number" step="any" id="f_favok_bu">
-          <input type="number" step="any" id="f_favok_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">FAVÖK (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_favok_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_favok_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>Faaliyet Kârı / EBİT (mn ₺)</label>
-          <input type="number" step="any" id="f_faaliyet_kari_bu">
-          <input type="number" step="any" id="f_faaliyet_kari_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Faaliyet Kârı / EBİT (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_faaliyet_kari_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_faaliyet_kari_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>Net Kâr (mn ₺)</label>
-          <input type="number" step="any" id="f_netkar_bu">
-          <input type="number" step="any" id="f_netkar_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Net Kâr (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_netkar_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_netkar_onceki">
+            </label>
+          </div>
         </div>
         <p class="hint">Bilanço</p>
-        <div class="grid-2">
-          <label>Dönen Varlıklar (mn ₺)</label>
-          <input type="number" step="any" id="f_donen_varlik_bu">
-          <input type="number" step="any" id="f_donen_varlik_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Dönen Varlıklar (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_donen_varlik_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_donen_varlik_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>Duran Varlıklar (mn ₺)</label>
-          <input type="number" step="any" id="f_duran_varlik_bu">
-          <input type="number" step="any" id="f_duran_varlik_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Duran Varlıklar (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_duran_varlik_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_duran_varlik_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>Kısa Vadeli Yükümlülükler (mn ₺)</label>
-          <input type="number" step="any" id="f_kv_yukumluluk_bu">
-          <input type="number" step="any" id="f_kv_yukumluluk_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Kısa Vadeli Yükümlülükler (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_kv_yukumluluk_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_kv_yukumluluk_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>Uzun Vadeli Yükümlülükler (mn ₺)</label>
-          <input type="number" step="any" id="f_uv_yukumluluk_bu">
-          <input type="number" step="any" id="f_uv_yukumluluk_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Uzun Vadeli Yükümlülükler (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_uv_yukumluluk_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_uv_yukumluluk_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>Net Borç (mn ₺)</label>
-          <input type="number" step="any" id="f_netborc_bu">
-          <input type="number" step="any" id="f_netborc_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Net Borç (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_netborc_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_netborc_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>Özkaynaklar (mn ₺)</label>
-          <input type="number" step="any" id="f_ozkaynak_bu">
-          <input type="number" step="any" id="f_ozkaynak_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Özkaynaklar (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_ozkaynak_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_ozkaynak_onceki">
+            </label>
+          </div>
         </div>
       </details>
 
       <details id="accordion-2" class="accordion">
         <summary>2 · Özet Nakit Akış Tablosu — Bu Çeyrek / Önceki Çeyrek</summary>
-        <div class="grid-2 grid-header">
-          <span></span><span class="col-label">Bu Çeyrek</span><span class="col-label">Önceki Çeyrek</span>
+        <div class="fin-row">
+          <span class="fin-row__label">İşletme Faaliyetlerinden Nakit Akışı (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_isletme_nakit_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_isletme_nakit_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>İşletme Faaliyetlerinden Nakit Akışı (mn ₺)</label>
-          <input type="number" step="any" id="f_isletme_nakit_bu">
-          <input type="number" step="any" id="f_isletme_nakit_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Yatırım Faaliyetlerinden Nakit Akışı (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_yatirim_nakit_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_yatirim_nakit_onceki">
+            </label>
+          </div>
         </div>
-        <div class="grid-2">
-          <label>Yatırım Faaliyetlerinden Nakit Akışı (mn ₺)</label>
-          <input type="number" step="any" id="f_yatirim_nakit_bu">
-          <input type="number" step="any" id="f_yatirim_nakit_onceki">
-        </div>
-        <div class="grid-2">
-          <label>Finansman Faaliyetlerinden Nakit Akışı (mn ₺)</label>
-          <input type="number" step="any" id="f_finansman_nakit_bu">
-          <input type="number" step="any" id="f_finansman_nakit_onceki">
+        <div class="fin-row">
+          <span class="fin-row__label">Finansman Faaliyetlerinden Nakit Akışı (mn ₺)</span>
+          <div class="fin-row__inputs">
+            <label class="fin-input">
+              <span class="fin-input__cap">Bu Çeyrek</span>
+              <input type="number" step="any" id="f_finansman_nakit_bu">
+            </label>
+            <label class="fin-input">
+              <span class="fin-input__cap">Önceki Çeyrek</span>
+              <input type="number" step="any" id="f_finansman_nakit_onceki">
+            </label>
+          </div>
         </div>
         <p class="hint">Serbest Nakit Akışı otomatik hesaplanır (İşletme + Yatırım Nakit Akışı).</p>
       </details>
