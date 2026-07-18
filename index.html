@@ -184,6 +184,12 @@
       <button type="button" id="saveMacroBtn" class="btn btn--primary">Manuel Verileri Kaydet</button>
     </div>
     <p id="macroError" class="login-error" hidden></p>
+
+    <div id="sectorSensitivityPanel" class="sector-sensitivity">
+      <h3 class="panel-title">Sektör Duyarlılığı — Genel/Tarihsel Eğilim</h3>
+      <p class="hint">Girdiğin makro verilere göre, her sektörün bu tür ortamlarda tarihsel olarak nasıl etkilendiğine dair genel eğilim notları. Bu bir yatırım tavsiyesi veya sektör tahsis önerisi değildir — yalnızca gözlemdir; her şirket kendi özel koşullarına göre farklılaşabilir.</p>
+      <div id="sectorSensitivityList" class="sector-sensitivity-list"></div>
+    </div>
   </div>
 </section>
 
@@ -206,7 +212,25 @@
           <input type="text" id="f_ticker" placeholder="ÖRNK" maxlength="8" required>
         </label>
         <label>Sektör
-          <input type="text" id="f_sector" placeholder="Örn. Havacılık">
+          <select id="f_sector">
+            <option value="">— Seç —</option>
+            <option value="Bankacılık">Bankacılık</option>
+            <option value="Sigorta">Sigorta</option>
+            <option value="Gayrimenkul/İnşaat">Gayrimenkul/İnşaat</option>
+            <option value="Sanayi/Üretim">Sanayi/Üretim</option>
+            <option value="Perakende">Perakende</option>
+            <option value="Turizm">Turizm</option>
+            <option value="Enerji">Enerji</option>
+            <option value="Teknoloji/Bilişim">Teknoloji/Bilişim</option>
+            <option value="Ulaştırma/Lojistik">Ulaştırma/Lojistik</option>
+            <option value="Gıda/Tarım">Gıda/Tarım</option>
+            <option value="Sağlık">Sağlık</option>
+            <option value="Telekomünikasyon">Telekomünikasyon</option>
+            <option value="Otomotiv">Otomotiv</option>
+            <option value="Tekstil">Tekstil</option>
+            <option value="Madencilik">Madencilik</option>
+            <option value="Diğer">Diğer</option>
+          </select>
         </label>
       </div>
 
@@ -485,6 +509,12 @@
             <button type="button" id="monthlyManualSaveBtn" class="btn btn--ghost">Ekle / Güncelle</button>
           </div>
         </div>
+      </div>
+
+      <div class="panel sector-compare-panel" id="sectorComparePanel" hidden>
+        <h3 class="panel-title">Sektör İçi Kıyaslama</h3>
+        <p class="hint" id="sectorCompareHint"></p>
+        <div class="sector-compare-table" id="sectorCompareTable"></div>
       </div>
 
       <div class="panel financials-panel" id="financialsPanel" hidden>

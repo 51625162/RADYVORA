@@ -78,6 +78,7 @@ function rvStartListening() {
         }
       }
       renderPortfolioSummary();
+      renderSectorSensitivity();
     },
     (err) => console.error('RADYVORA: Ayarlar okunamadı', err)
   );
@@ -351,6 +352,119 @@ function handleMonthlyManualSave() {
   ref.doc(c.id).set({ aylikGecmis: hist }, { merge: true })
     .then(() => { ayEl.value = ''; fiyatEl.value = ''; })
     .catch((err) => alert('Kaydedilemedi: ' + err.message));
+}
+
+/* ================================================================
+   SEKTÖR DUYARLILIĞI — genel/tarihsel eğilim notları.
+   Yatırım tavsiyesi veya tahsis önerisi değildir; yalnızca girilen
+   makro verilere göre sektörlerin tarihsel olarak nasıl eğilim
+   gösterdiğine dair gözlemdir. Kural tabanlıdır (Dr. Uzman ile
+   tutarlı — şeffaf, "kara kutu" değil).
+================================================================ */
+const SECTOR_SENSITIVITY_RULES = {
+  'Bankacılık': [
+    { factor: 'reelFaiz', whenPos: { dir: 'pos', note: 'Pozitif reel faiz ortamında marjlar tarihsel olarak genişleyebilir.' }, whenNeg: { dir: 'notr', note: 'Negatif reel faizde kredi büyümesi hızlanır ama marj baskılanabilir.' } },
+    { factor: 'cds', whenHigh: { dir: 'neg', note: 'Yüksek CDS, fonlama maliyetini ve risk algısını artırabilir.' } }
+  ],
+  'Sigorta': [
+    { factor: 'faiz', whenHigh: { dir: 'pos', note: 'Yüksek faiz ortamında yatırım geliri tarihsel olarak artar.' } }
+  ],
+  'Gayrimenkul/İnşaat': [
+    { factor: 'faiz', whenHigh: { dir: 'neg', note: 'Yüksek faiz kredi/konut maliyetini artırır, talebi baskılayabilir.' }, whenLow: { dir: 'pos', note: 'Düşük faiz ortamı talebi tarihsel olarak destekler.' } }
+  ],
+  'Sanayi/Üretim': [
+    { factor: 'pmi', whenAbove50: { dir: 'pos', note: 'PMI 50 üzeri, imalatta genişleme sinyali.' }, whenBelow50: { dir: 'neg', note: 'PMI 50 altı, imalatta daralma sinyali.' } }
+  ],
+  'Perakende': [
+    { factor: 'tufe', whenHigh: { dir: 'notr', note: 'Yüksek enflasyon nominal ciroyu şişirebilir, ama tüketici gücünü baskılayabilir — karışık etki.' } }
+  ],
+  'Turizm': [
+    { factor: 'cds', whenHigh: { dir: 'pos', note: 'TL\'nin zayıf algılanması yabancı turist için görece ucuzluk yaratabilir.' } }
+  ],
+  'Enerji': [
+    { factor: 'cds', whenHigh: { dir: 'neg', note: 'TL değer kaybı riski, ithal girdi ağırlıklı maliyetleri artırabilir.' } }
+  ],
+  'Teknoloji/Bilişim': [
+    { factor: 'faiz', whenHigh: { dir: 'neg', note: 'Yüksek faiz, büyüme odaklı değerleme çarpanlarını tarihsel olarak baskılar.' } }
+  ],
+  'Ulaştırma/Lojistik': [
+    { factor: 'cds', whenHigh: { dir: 'neg', note: 'Yakıt ve döviz bazlı maliyetler TL değer kaybında artabilir.' } }
+  ],
+  'Gıda/Tarım': [
+    { factor: 'tufe', whenHigh: { dir: 'notr', note: 'Görece defansif sektör; yüksek enflasyon nominal ciroyu artırabilir.' } }
+  ],
+  'Sağlık': [
+    { factor: 'tufe', whenHigh: { dir: 'notr', note: 'Defansif sektör, makro dalgalanmalara görece dayanıklı kabul edilir.' } }
+  ],
+  'Telekomünikasyon': [
+    { factor: 'faiz', whenHigh: { dir: 'notr', note: 'Defansif nakit akışı var, ancak borçluluk maliyeti faiz artışında yükselebilir.' } }
+  ],
+  'Otomotiv': [
+    { factor: 'faiz', whenHigh: { dir: 'neg', note: 'Yüksek faiz taksitli satışları tarihsel olarak baskılar.' } },
+    { factor: 'cds', whenHigh: { dir: 'pos', note: 'İhracat ağırlıklı otomotivde TL değer kaybı rekabet gücünü artırabilir.' } }
+  ],
+  'Tekstil': [
+    { factor: 'cds', whenHigh: { dir: 'pos', note: 'İhracat ağırlıklıysa TL değer kaybından olumlu etkilenebilir.' } }
+  ],
+  'Madencilik': [
+    { factor: 'cds', whenHigh: { dir: 'pos', note: 'Emtia + kur duyarlılığı yüksek; TL değer kaybında ihracat geliri artabilir.' } }
+  ]
+};
+
+function computeSectorSensitivity(macro) {
+  const faiz = macro.faiz, tufe = macro.tufe, cds = macro.cds, pmi = macro.pmi;
+  const reelFaiz = (Number.isFinite(faiz) && Number.isFinite(tufe)) ? faiz - tufe : null;
+  const faizHigh = Number.isFinite(faiz) ? faiz >= 35 : null;
+  const tufeHigh = Number.isFinite(tufe) ? tufe >= 30 : null;
+  const cdsHigh = Number.isFinite(cds) ? cds >= 300 : null;
+
+  const results = [];
+  Object.keys(SECTOR_SENSITIVITY_RULES).forEach((sector) => {
+    const rules = SECTOR_SENSITIVITY_RULES[sector];
+    const items = [];
+    rules.forEach((rule) => {
+      if (rule.factor === 'reelFaiz' && reelFaiz !== null) {
+        items.push(reelFaiz >= 0 ? rule.whenPos : rule.whenNeg);
+      } else if (rule.factor === 'faiz' && faizHigh !== null) {
+        const r = faizHigh ? rule.whenHigh : rule.whenLow;
+        if (r) items.push(r);
+      } else if (rule.factor === 'tufe' && tufeHigh !== null && rule.whenHigh) {
+        if (tufeHigh) items.push(rule.whenHigh);
+      } else if (rule.factor === 'cds' && cdsHigh !== null && rule.whenHigh) {
+        if (cdsHigh) items.push(rule.whenHigh);
+      } else if (rule.factor === 'pmi' && Number.isFinite(pmi)) {
+        items.push(pmi >= 50 ? rule.whenAbove50 : rule.whenBelow50);
+      }
+    });
+    if (items.length) results.push({ sector, items });
+  });
+  return results;
+}
+
+function renderSectorSensitivity() {
+  if (!els.sectorSensitivityList) return;
+  const macro = {
+    faiz: state.benchmark.m_faiz, tufe: state.benchmark.m_tufe,
+    cds: state.benchmark.m_cds, pmi: state.benchmark.m_pmi
+  };
+  const hasAnyMacro = [macro.faiz, macro.tufe, macro.cds, macro.pmi].some(Number.isFinite);
+  if (!hasAnyMacro) {
+    els.sectorSensitivityList.innerHTML = '<p class="muted-note">TÜFE, Faiz, CDS veya PMI değerlerinden en az birini girip kaydettiğinde sektör duyarlılığı burada görünür.</p>';
+    return;
+  }
+  const results = computeSectorSensitivity(macro);
+  if (!results.length) {
+    els.sectorSensitivityList.innerHTML = '<p class="muted-note">Girilen verilerle eşleşen bir gözlem üretilemedi.</p>';
+    return;
+  }
+  els.sectorSensitivityList.innerHTML = results.map((r) => `
+    <div class="sector-sens-card">
+      <div class="sector-sens-card__name">${escapeHtml(r.sector)}</div>
+      <ul>
+        ${r.items.map(i => `<li><span class="sector-sens-dot ${i.dir}"></span>${escapeHtml(i.note)}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('');
 }
 
 /* ================================================================
@@ -684,7 +798,9 @@ function cacheEls() {
     'finOzkaynakBu', 'finOzkaynakOnceki', 'finIsletmeNakitBu', 'finIsletmeNakitOnceki',
     'finYatirimNakitBu', 'finYatirimNakitOnceki', 'finFinansmanNakitBu', 'finFinansmanNakitOnceki',
     'finFcfBu', 'finFcfOnceki', 'finCariOran', 'finFcfYillik',
-    'sidebarToggle', 'sidebarBackdrop', 'sectionNav'
+    'sidebarToggle', 'sidebarBackdrop', 'sectionNav',
+    'sectorSensitivityPanel', 'sectorSensitivityList',
+    'sectorComparePanel', 'sectorCompareHint', 'sectorCompareTable'
   ].forEach(id => { els[id] = document.getElementById(id); });
 }
 
@@ -867,14 +983,60 @@ function renderCompanyList() {
 }
 
 /* ---------------- Render: per-company dashboard ---------------- */
+function renderSectorComparison(c) {
+  if (!els.sectorComparePanel) return;
+  if (!c || !c.sector) {
+    els.sectorComparePanel.hidden = true;
+    return;
+  }
+  const peers = state.companies.filter(x => x.sector === c.sector);
+  if (peers.length < 2) {
+    els.sectorComparePanel.hidden = false;
+    els.sectorCompareHint.textContent = `"${c.sector}" sektöründe defterinde başka şirket yok — en az bir şirket daha ekleyip aynı sektörü seçersen burada yan yana kıyaslama görünür.`;
+    els.sectorCompareTable.innerHTML = '';
+    return;
+  }
+  els.sectorComparePanel.hidden = false;
+  els.sectorCompareHint.textContent = `"${c.sector}" sektöründeki ${peers.length} şirket, girdiğin verilere göre yan yana. Bu bir sıralama/tavsiye değildir.`;
+
+  const rows = peers.map((p) => {
+    const { scores, derived } = computeScores(p);
+    const valSum = valuationSummary(p, derived);
+    return { p, scores, derived, valSum };
+  });
+
+  const fmtx = (v) => (Number.isFinite(v) ? fmt1(v) + 'x' : '—');
+  const rowsHtml = rows.map(({ p, scores, derived, valSum }) => {
+    const tagCls = valSum ? (valSum.overall === 'ucuz' ? 'pos' : valSum.overall === 'pahali' ? 'neg' : 'notr') : 'notr';
+    const tagText = valSum ? (valSum.overall === 'ucuz' ? 'Ucuz' : valSum.overall === 'pahali' ? 'Pahalı' : 'Makul') : '—';
+    return `
+      <div class="sc-row${p.id === c.id ? ' sc-row--active' : ''}">
+        <span class="sc-name">${escapeHtml(p.name)}<span class="ticker">${escapeHtml(p.ticker)}</span></span>
+        <span>${fmtx(derived.cFk)}</span>
+        <span>${fmtx(derived.cPddd)}</span>
+        <span>${fmtx(derived.cFdFavok)}</span>
+        <span>${Number.isFinite(scores.genel) ? fmt1(scores.genel) + '/100' : '—'}</span>
+        <span class="tag ${tagCls}">${tagText}</span>
+      </div>`;
+  }).join('');
+
+  els.sectorCompareTable.innerHTML = `
+    <div class="sc-row sc-row--head">
+      <span>Şirket</span><span>F/K</span><span>PD/DD</span><span>FD/FAVÖK</span><span>Genel Skor</span><span>Değerleme</span>
+    </div>
+    ${rowsHtml}`;
+}
+
 function renderDashboard(c) {
   if (!c) {
     els.dashboardEmpty.hidden = false;
     els.dashboard.hidden = true;
+    renderSectorComparison(null);
     return;
   }
   els.dashboardEmpty.hidden = true;
   els.dashboard.hidden = false;
+  renderSectorComparison(c);
 
   const result = computeScores(c);
   const { scores, notes, derived } = result;
