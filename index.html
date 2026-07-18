@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RADYVORA — Dr. Uzman</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,17 +24,33 @@
       <input type="password" id="loginPassword" required autocomplete="current-password">
     </label>
     <p id="loginError" class="login-error" hidden></p>
-    <button type="submit" class="btn btn--brass btn--wide">Giriş Yap</button>
+    <button type="submit" class="btn btn--primary btn--wide">Giriş Yap</button>
     <p class="muted-note login-note">Hesabın yoksa yönetici (sen) Firebase Console'dan seni eklemeli.</p>
   </form>
 </div>
 
 <!-- APP (varsayılan olarak açık — giriş ekranı olmadan direkt görünür) -->
-<div id="appShell">
+<div id="appShell" class="sidebar-open">
+
+<div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
+<aside id="sidebar" class="sidebar" aria-label="Şirket Defteri">
+  <div class="sidebar__head">
+    <div class="masthead__mark">RV</div>
+    <span class="sidebar__title">Şirket Defteri</span>
+  </div>
+  <button id="newCompanyBtn" class="btn btn--primary btn--wide" type="button">+ Yeni Şirket</button>
+  <ul id="companyList" class="company-list"></ul>
+  <p id="emptyListNote" class="muted-note">Henüz şirket eklenmedi. "Yeni Şirket" ile başlayın.</p>
+</aside>
+
+<div id="appMain" class="app-main">
 
 <header class="masthead">
   <div class="masthead__inner">
-    <div class="masthead__mark">RV</div>
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Şirket Defterini Aç/Kapat">
+      <span></span><span></span><span></span>
+    </button>
     <div class="masthead__text">
       <p class="eyebrow">Analiz Defteri · Dr. Uzman</p>
       <h1>RADYVORA</h1>
@@ -61,7 +80,7 @@
           <input type="number" step="any" id="bm_bist_guncel">
         </label>
       </div>
-      <button type="button" id="saveBenchmarkBtn" class="btn btn--brass">Kaydet</button>
+      <button type="button" id="saveBenchmarkBtn" class="btn btn--primary">Kaydet</button>
     </div>
 
     <div class="portfolio-cards">
@@ -147,7 +166,7 @@
 
     <div class="macro-footer">
       <span id="macroUpdated" class="muted-note"></span>
-      <button type="button" id="saveMacroBtn" class="btn btn--brass">Manuel Verileri Kaydet</button>
+      <button type="button" id="saveMacroBtn" class="btn btn--primary">Manuel Verileri Kaydet</button>
     </div>
     <p id="macroError" class="login-error" hidden></p>
   </div>
@@ -155,17 +174,8 @@
 
 <main class="workspace">
 
-  <!-- LEFT: Company ledger + data entry -->
-  <section class="ledger-col" aria-label="Şirket kayıtları">
-
-    <div class="panel">
-      <div class="panel__head">
-        <h2>Şirket Defteri</h2>
-        <button id="newCompanyBtn" class="btn btn--brass" type="button">+ Yeni Şirket</button>
-      </div>
-      <ul id="companyList" class="company-list"></ul>
-      <p id="emptyListNote" class="muted-note">Henüz şirket eklenmedi. "Yeni Şirket" ile başlayın.</p>
-    </div>
+  <!-- LEFT: Data entry -->
+  <section class="ledger-col" aria-label="Veri girişi">
 
     <form id="companyForm" class="panel form-panel" hidden>
       <div class="panel__head">
@@ -362,7 +372,7 @@
       </details>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn--brass btn--wide">Kaydet ve Analiz Et</button>
+        <button type="submit" class="btn btn--primary btn--wide">Kaydet ve Analiz Et</button>
       </div>
     </form>
   </section>
@@ -371,7 +381,7 @@
   <section class="dashboard-col" aria-label="Dr. Uzman analizi">
 
     <div id="dashboardEmpty" class="panel empty-state">
-      <p>Sol taraftan bir şirket seçin veya yeni şirket ekleyip verilerini girin.</p>
+      <p>☰ ile Şirket Defteri'ni açıp bir şirket seçin, ya da yeni şirket ekleyip verilerini girin.</p>
       <p class="muted-note">Dr. Uzman, girdiğiniz verilerle 7 eksende gerekçeli bir değerlendirme üretir.</p>
     </div>
 
@@ -521,6 +531,8 @@
 <footer class="site-footer">
   <p>RADYVORA · Veriler Firebase üzerinde, yalnızca kendi hesabınla eriştiğin şekilde saklanır.</p>
 </footer>
+
+</div><!-- /appMain -->
 
 </div><!-- /appShell -->
 

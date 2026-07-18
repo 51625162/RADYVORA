@@ -296,14 +296,14 @@ function drawMonthlyChart(canvas, points) {
   const xFor = (i) => padL + (points.length === 1 ? plotW / 2 : (plotW * i) / (points.length - 1));
   const yFor = (v) => padT + plotH - ((v - minV) / (maxV - minV)) * plotH;
 
-  ctx.strokeStyle = 'rgba(201,162,39,0.3)';
+  ctx.strokeStyle = 'rgba(16,23,40,0.12)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(padL, yFor(0));
   ctx.lineTo(w - padR, yFor(0));
   ctx.stroke();
 
-  ctx.fillStyle = '#9aa5ac';
+  ctx.fillStyle = '#67718A';
   ctx.font = '10px ui-monospace, monospace';
   ctx.textAlign = 'center';
   points.forEach((p, i) => ctx.fillText(p.ay, xFor(i), h - 8));
@@ -311,8 +311,8 @@ function drawMonthlyChart(canvas, points) {
   ctx.fillText(fmtPct(maxV), padL - 6, padT + 8);
   ctx.fillText(fmtPct(minV), padL - 6, padT + plotH);
 
-  ctx.strokeStyle = '#c9a227';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#0E9F6E';
+  ctx.lineWidth = 2;
   ctx.beginPath();
   points.forEach((p, i) => {
     const x = xFor(i), y = yFor(p.pnl);
@@ -320,7 +320,7 @@ function drawMonthlyChart(canvas, points) {
   });
   ctx.stroke();
 
-  ctx.fillStyle = '#c9a227';
+  ctx.fillStyle = '#0E9F6E';
   points.forEach((p, i) => {
     const x = xFor(i), y = yFor(p.pnl);
     ctx.beginPath();
@@ -594,9 +594,9 @@ function drawRadar(canvas, scores) {
   const n = RADAR_AXES.length;
   const angleFor = (i) => (Math.PI * 2 * i) / n - Math.PI / 2;
 
-  const lineColor = 'rgba(201,162,39,0.28)';
-  const brass = '#c9a227';
-  const text = '#9aa5ac';
+  const lineColor = 'rgba(16,23,40,0.10)';
+  const brass = '#0E9F6E';
+  const text = '#67718A';
 
   ctx.strokeStyle = lineColor;
   ctx.lineWidth = 1;
@@ -638,7 +638,7 @@ function drawRadar(canvas, scores) {
   ctx.beginPath();
   pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
   ctx.closePath();
-  ctx.fillStyle = 'rgba(201,162,39,0.18)';
+  ctx.fillStyle = 'rgba(14,159,110,0.14)';
   ctx.fill();
   ctx.strokeStyle = brass;
   ctx.lineWidth = 1.5;
@@ -681,7 +681,8 @@ function cacheEls() {
     'finToplamVarlikBu', 'finToplamVarlikOnceki', 'finKvBu', 'finKvOnceki', 'finUvBu', 'finUvOnceki',
     'finOzkaynakBu', 'finOzkaynakOnceki', 'finIsletmeNakitBu', 'finIsletmeNakitOnceki',
     'finYatirimNakitBu', 'finYatirimNakitOnceki', 'finFinansmanNakitBu', 'finFinansmanNakitOnceki',
-    'finFcfBu', 'finFcfOnceki', 'finCariOran', 'finFcfYillik'
+    'finFcfBu', 'finFcfOnceki', 'finCariOran', 'finFcfYillik',
+    'sidebarToggle', 'sidebarBackdrop'
   ].forEach(id => { els[id] = document.getElementById(id); });
 }
 
@@ -878,6 +879,7 @@ function renderDashboard(c) {
   const tier = tierFor(scores.genel);
 
   els.verdictStamp.className = 'verdict-stamp ' + tier.cls;
+  els.verdictStamp.style.setProperty('--score-pct', Number.isFinite(scores.genel) ? clamp(scores.genel, 0, 100) : 0);
   els.verdictTier.textContent = tier.label;
   els.verdictTicker.textContent = c.ticker + (c.sector ? ' · ' + c.sector : '');
   els.verdictName.textContent = c.name;
@@ -1192,6 +1194,10 @@ function handleSaveBenchmark() {
 /* ---------------- Init ---------------- */
 function init() {
   cacheEls();
+  if (window.innerWidth <= 880) {
+    const shell = document.getElementById('appShell');
+    if (shell) shell.classList.remove('sidebar-open');
+  }
   renderCompanyList();
   renderDashboard(null);
   renderPortfolioSummary();
@@ -1217,6 +1223,25 @@ function init() {
   rvFetchDovizKurlari();
 
   if (els.monthlyManualSaveBtn) els.monthlyManualSaveBtn.addEventListener('click', handleMonthlyManualSave);
+
+  /* Sol kenar çubuğu (Şirket Defteri) — ☰ ile aç/kapa */
+  const appShellEl = document.getElementById('appShell');
+  if (els.sidebarToggle && appShellEl) {
+    els.sidebarToggle.addEventListener('click', () => {
+      appShellEl.classList.toggle('sidebar-open');
+    });
+  }
+  if (els.sidebarBackdrop && appShellEl) {
+    els.sidebarBackdrop.addEventListener('click', () => {
+      appShellEl.classList.remove('sidebar-open');
+    });
+  }
+  // Şirket seçilince mobilde kenar çubuğunu otomatik kapat
+  if (els.companyList && appShellEl) {
+    els.companyList.addEventListener('click', () => {
+      if (window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
