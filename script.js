@@ -48,6 +48,7 @@ function rvStartListening() {
       const active = state.companies.find((c) => c.id === state.activeId) || null;
       renderDashboard(active);
       if (!active) { state.activeId = null; els.companyForm.hidden = true; }
+      rvSyncSectionNav();
       renderPortfolioSummary();
       rvAutoSnapshotMonthly();
     },
@@ -89,6 +90,7 @@ function rvStopListening() {
   state.activeId = null;
   state.benchmark = {};
   if (els.companyForm) els.companyForm.hidden = true;
+  if (els.sectionNav) els.sectionNav.hidden = true;
   if (els.companyList) renderCompanyList();
   if (els.dashboard) renderDashboard(null);
   if (els.pfEmptyNote) renderPortfolioSummary();
@@ -682,7 +684,7 @@ function cacheEls() {
     'finOzkaynakBu', 'finOzkaynakOnceki', 'finIsletmeNakitBu', 'finIsletmeNakitOnceki',
     'finYatirimNakitBu', 'finYatirimNakitOnceki', 'finFinansmanNakitBu', 'finFinansmanNakitOnceki',
     'finFcfBu', 'finFcfOnceki', 'finCariOran', 'finFcfYillik',
-    'sidebarToggle', 'sidebarBackdrop'
+    'sidebarToggle', 'sidebarBackdrop', 'sectionNav'
   ].forEach(id => { els[id] = document.getElementById(id); });
 }
 
@@ -1136,6 +1138,10 @@ function renderPortfolioSummary() {
   els.sectorNarrative.innerHTML = narrativeParts.map(t => `<p>${escapeHtml(t)}</p>`).join('');
 }
 
+function rvSyncSectionNav() {
+  if (els.sectionNav) els.sectionNav.hidden = els.companyForm.hidden;
+}
+
 /* ---------------- Actions ---------------- */
 function selectCompany(id) {
   state.activeId = id;
@@ -1144,6 +1150,7 @@ function selectCompany(id) {
   if (c) fillForm(c);
   renderCompanyList();
   renderDashboard(c);
+  rvSyncSectionNav();
 }
 
 function startNewCompany() {
@@ -1152,6 +1159,7 @@ function startNewCompany() {
   clearForm();
   renderCompanyList();
   renderDashboard(null);
+  rvSyncSectionNav();
   document.getElementById('f_name').focus();
 }
 
@@ -1177,7 +1185,7 @@ function handleDelete() {
   if (!c) return;
   if (!confirm(`"${c.name}" kaydını silmek istediğinize emin misiniz?`)) return;
   ref.doc(state.activeId).delete()
-    .then(() => { state.activeId = null; els.companyForm.hidden = true; renderDashboard(null); })
+    .then(() => { state.activeId = null; els.companyForm.hidden = true; renderDashboard(null); rvSyncSectionNav(); })
     .catch((err) => alert('Silinemedi: ' + err.message));
 }
 
@@ -1240,6 +1248,21 @@ function init() {
   if (els.companyList && appShellEl) {
     els.companyList.addEventListener('click', () => {
       if (window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
+    });
+  }
+
+  /* Veri Girişi bölüm menüsü — tıklanınca ilgili accordion'u açıp kaydırır */
+  if (els.sectionNav) {
+    els.sectionNav.addEventListener('click', (e) => {
+      const link = e.target.closest('.section-nav-link');
+      if (!link) return;
+      const target = document.getElementById(link.dataset.target);
+      if (!target) return;
+      target.open = true;
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      els.sectionNav.querySelectorAll('.section-nav-link').forEach((el) => el.classList.remove('is-active'));
+      link.classList.add('is-active');
+      if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
     });
   }
 }

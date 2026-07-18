@@ -835,3 +835,31 @@ input::placeholder, textarea::placeholder{ color: #A6AEC2; }
 }
 
 .financials-panel .multiples-table{ margin-top: 6px; }
+
+/* ---------- Sidebar section nav (Veri Girişi bölümleri) ---------- */
+.sidebar__subtitle{
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sidebar-text-dim);
+  margin: 20px 0 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--sidebar-line);
+}
+.section-nav-list{ list-style: none; margin: 0; padding: 0; }
+.section-nav-link{
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--sidebar-text-dim);
+  padding: 7px 8px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.section-nav-link:hover{ background: var(--sidebar-surface); color: #fff; }
+.section-nav-link.is-active{ background: var(--primary-soft); color: var(--primary-dim); font-weight: 600; }

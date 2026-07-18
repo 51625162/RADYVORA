@@ -42,6 +42,21 @@
   <button id="newCompanyBtn" class="btn btn--primary btn--wide" type="button">+ Yeni Şirket</button>
   <ul id="companyList" class="company-list"></ul>
   <p id="emptyListNote" class="muted-note">Henüz şirket eklenmedi. "Yeni Şirket" ile başlayın.</p>
+
+  <nav id="sectionNav" class="section-nav" aria-label="Veri Girişi Bölümleri" hidden>
+    <p class="sidebar__subtitle">Veri Girişi Bölümleri</p>
+    <ul class="section-nav-list">
+      <li><button type="button" class="section-nav-link" data-target="accordion-1">1 · Özet Bilanço &amp; Gelir Tablosu</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-2">2 · Özet Nakit Akış Tablosu</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-3">3 · Sektör Ortalama Çarpanları</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-4">4 · Yönetim Takibi</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-5">5 · KAP Etki Kayıtları</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-6">6 · Portföy Pozisyonu</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-7">7 · Sektör &amp; Makro Görünüm</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-8">8 · Manipülasyon Riski Girdileri</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-9">9 · KAP Faaliyet Raporları</button></li>
+    </ul>
+  </nav>
 </aside>
 
 <div id="appMain" class="app-main">
@@ -195,7 +210,7 @@
         </label>
       </div>
 
-      <details class="accordion" open>
+      <details id="accordion-1" class="accordion" open>
         <summary>1 · Özet Bilanço &amp; Gelir Tablosu — Bu Çeyrek / Önceki Çeyrek</summary>
         <div class="grid-2 grid-header">
           <span></span><span class="col-label">Bu Çeyrek</span><span class="col-label">Önceki Çeyrek</span>
@@ -259,7 +274,7 @@
         </div>
       </details>
 
-      <details class="accordion">
+      <details id="accordion-2" class="accordion">
         <summary>2 · Özet Nakit Akış Tablosu — Bu Çeyrek / Önceki Çeyrek</summary>
         <div class="grid-2 grid-header">
           <span></span><span class="col-label">Bu Çeyrek</span><span class="col-label">Önceki Çeyrek</span>
@@ -282,7 +297,7 @@
         <p class="hint">Serbest Nakit Akışı otomatik hesaplanır (İşletme + Yatırım Nakit Akışı).</p>
       </details>
 
-      <details class="accordion">
+      <details id="accordion-3" class="accordion">
         <summary>3 · Sektör Ortalama Çarpanları</summary>
         <p class="hint">Şirketin kendi çarpanlarını artık elle girmene gerek yok — güncel fiyat ve hisse sayısından otomatik hesaplanıyor (bkz. bölüm 6). Burada yalnızca kıyaslama için sektör ortalamasını gir.</p>
         <div class="field-row">
@@ -298,7 +313,7 @@
         </div>
       </details>
 
-      <details class="accordion">
+      <details id="accordion-4" class="accordion">
         <summary>4 · Yönetim Takibi</summary>
         <div class="field-row">
           <label>Verilen Söz Sayısı
@@ -310,14 +325,14 @@
         </div>
       </details>
 
-      <details class="accordion">
+      <details id="accordion-5" class="accordion">
         <summary>5 · KAP Etki Kayıtları</summary>
         <p class="hint">Geçmiş KAP açıklamalarını ve ertesi gün fiyat tepkisini kaydedin.</p>
         <div id="kapEntries" class="kap-entries"></div>
         <button type="button" id="addKapBtn" class="btn btn--ghost">+ KAP Kaydı Ekle</button>
       </details>
 
-      <details class="accordion">
+      <details id="accordion-6" class="accordion">
         <summary>6 · Portföy Pozisyonu</summary>
         <p class="hint">Portföy ağırlığın artık elle girilmiyor — buradaki verilerden otomatik hesaplanıyor.</p>
         <div class="field-row">
@@ -339,7 +354,7 @@
         </div>
       </details>
 
-      <details class="accordion">
+      <details id="accordion-7" class="accordion">
         <summary>7 · Sektör &amp; Makro Görünüm</summary>
         <div class="field-row">
           <label>Sektör Görünümü <span class="range-out" id="sektorGorunumOut">5</span>/10
@@ -348,7 +363,7 @@
         </div>
       </details>
 
-      <details class="accordion">
+      <details id="accordion-8" class="accordion">
         <summary>8 · Manipülasyon Riski Girdileri</summary>
         <p class="hint">Bu girdiler "manipülasyon var" demez — yalnızca hissenin yapısal olarak manipülasyona ne kadar açık olduğunu gösterir (küçük piyasa değeri + düşük halka açıklık + düşük hacim + sık KAP açıklaması = daha kırılgan).</p>
         <div class="field-row">
@@ -364,7 +379,7 @@
         </div>
       </details>
 
-      <details class="accordion">
+      <details id="accordion-9" class="accordion">
         <summary>9 · KAP Faaliyet Raporları</summary>
         <p class="hint">PDF'i kopyalamıyoruz — KAP'taki ilgili bildirime doğrudan bağlantı veriyoruz. İstersen kendi kısa özetini de ekleyebilirsin.</p>
         <div id="kapRaporEntries" class="kap-rapor-entries"></div>
