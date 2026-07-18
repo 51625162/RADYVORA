@@ -8,6 +8,7 @@ const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const fmt1 = (v) => (Number.isFinite(v) ? v.toFixed(1) : '—');
 const fmtPct = (v) => (Number.isFinite(v) ? (v > 0 ? '+' : '') + v.toFixed(1) + '%' : '—');
 const fmtMoney = (v) => (Number.isFinite(v) ? v.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : '—');
+const fmtMn = (v) => (Number.isFinite(v) ? v.toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' mn ₺' : '—');
 const fmtMulti = (v) => (Number.isFinite(v) ? v.toFixed(1) + 'x' : '—');
 
 let state = {
@@ -48,6 +49,7 @@ function rvStartListening() {
       renderDashboard(active);
       if (!active) { state.activeId = null; els.companyForm.hidden = true; }
       renderPortfolioSummary();
+      rvAutoSnapshotMonthly();
     },
     (err) => {
       console.error('RADYVORA: Firestore okuma hatası', err);
@@ -217,6 +219,138 @@ function fairValueRange(c) {
   };
 }
 
+/**
+ * Sektöre göre "Ucuz / Makul / Pahalı" göstergesi.
+ * Ekstra veri girişi gerekmez — zaten girilen fiyat + sektör ortalama
+ * çarpanlarından hesaplanır. Bant: sektör ortalamasının ±%15'i "makul"
+ * kabul edilir. Bu bir al/sat tavsiyesi değildir, yalnızca çarpanların
+ * sektör ortalamasına göre konumunu gösteren bir gözlemdir.
+ */
+function valuationCallForMultiple(companyVal, sectorVal) {
+  if (!Number.isFinite(companyVal) || !Number.isFinite(sectorVal) || sectorVal === 0) return null;
+  const ratio = companyVal / sectorVal;
+  if (ratio <= 0.85) return 'ucuz';
+  if (ratio >= 1.15) return 'pahali';
+  return 'makul';
+}
+
+function valuationSummary(c, derived) {
+  const items = [
+    { label: 'F/K', call: valuationCallForMultiple(derived.cFk, c.fkSektor) },
+    { label: 'PD/DD', call: valuationCallForMultiple(derived.cPddd, c.pdddSektor) },
+    { label: 'FD/FAVÖK', call: valuationCallForMultiple(derived.cFdFavok, c.fdfavokSektor) }
+  ].filter(i => i.call !== null);
+  if (!items.length) return null;
+
+  const counts = { ucuz: 0, makul: 0, pahali: 0 };
+  items.forEach(i => counts[i.call]++);
+
+  let overall = 'makul';
+  if (counts.ucuz > counts.pahali && counts.ucuz >= counts.makul) overall = 'ucuz';
+  else if (counts.pahali > counts.ucuz && counts.pahali >= counts.makul) overall = 'pahali';
+
+  return { items, counts, overall, total: items.length };
+}
+
+/* ================================================================
+   AYLIK PERFORMANS TAKİBİ
+   Her ay siteye ilk girişte, o anki fiyat otomatik olarak
+   c.aylikGecmis dizisine eklenir ({ ay: 'YYYY-MM', fiyat }).
+   Kullanıcı isterse aynı ay için elle ekleyip üzerine yazabilir
+   (unutulan ay ya da hatalı veri durumunda).
+================================================================ */
+function currentMonthKey(d) {
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function rvAutoSnapshotMonthly() {
+  const monthKey = currentMonthKey();
+  const ref = rvCompaniesRef();
+  if (!ref) return;
+  state.companies.forEach((c) => {
+    if (!Number.isFinite(c.guncelFiyat)) return;
+    const hist = Array.isArray(c.aylikGecmis) ? c.aylikGecmis : [];
+    const last = hist[hist.length - 1];
+    if (last && last.ay === monthKey) return; // bu ay zaten kaydedildi
+    const updated = hist.concat([{ ay: monthKey, fiyat: c.guncelFiyat }]);
+    ref.doc(c.id).set({ aylikGecmis: updated }, { merge: true }).catch(() => {});
+  });
+}
+
+function drawMonthlyChart(canvas, points) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (!points.length) return;
+
+  const padL = 48, padR = 16, padT = 16, padB = 26;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+
+  const vals = points.map(p => p.pnl);
+  let minV = Math.min(0, ...vals), maxV = Math.max(0, ...vals);
+  if (minV === maxV) { minV -= 5; maxV += 5; }
+  const pad = (maxV - minV) * 0.15;
+  minV -= pad; maxV += pad;
+
+  const xFor = (i) => padL + (points.length === 1 ? plotW / 2 : (plotW * i) / (points.length - 1));
+  const yFor = (v) => padT + plotH - ((v - minV) / (maxV - minV)) * plotH;
+
+  ctx.strokeStyle = 'rgba(201,162,39,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padL, yFor(0));
+  ctx.lineTo(w - padR, yFor(0));
+  ctx.stroke();
+
+  ctx.fillStyle = '#9aa5ac';
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.textAlign = 'center';
+  points.forEach((p, i) => ctx.fillText(p.ay, xFor(i), h - 8));
+  ctx.textAlign = 'right';
+  ctx.fillText(fmtPct(maxV), padL - 6, padT + 8);
+  ctx.fillText(fmtPct(minV), padL - 6, padT + plotH);
+
+  ctx.strokeStyle = '#c9a227';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const x = xFor(i), y = yFor(p.pnl);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  ctx.fillStyle = '#c9a227';
+  points.forEach((p, i) => {
+    const x = xFor(i), y = yFor(p.pnl);
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function handleMonthlyManualSave() {
+  if (!state.activeId) return;
+  const ayEl = document.getElementById('monthlyManualAy');
+  const fiyatEl = document.getElementById('monthlyManualFiyat');
+  const ay = ayEl.value;
+  const fiyat = fiyatEl.value === '' ? NaN : parseFloat(fiyatEl.value);
+  if (!ay || !Number.isFinite(fiyat)) { alert('Ay ve fiyat girmelisin.'); return; }
+
+  const c = state.companies.find(x => x.id === state.activeId);
+  const ref = rvCompaniesRef();
+  if (!c || !ref) return;
+
+  const hist = (Array.isArray(c.aylikGecmis) ? c.aylikGecmis.slice() : []);
+  const idx = hist.findIndex(h => h.ay === ay);
+  if (idx >= 0) hist[idx] = { ay, fiyat }; else hist.push({ ay, fiyat });
+  hist.sort((a, b) => a.ay.localeCompare(b.ay));
+
+  ref.doc(c.id).set({ aylikGecmis: hist }, { merge: true })
+    .then(() => { ayEl.value = ''; fiyatEl.value = ''; })
+    .catch((err) => alert('Kaydedilemedi: ' + err.message));
+}
+
 /* ================================================================
    SKORLAMA MOTORU
 ================================================================ */
@@ -232,8 +366,12 @@ function computeScores(c) {
   const leverageScoreForHealth = netBorcFavok !== null ? clamp(100 - netBorcFavok * 15, 0, 100) : null;
   const roeScore = roe !== null ? clamp(roe * 4, 0, 100) : null;
 
+  const currentRatio = (Number.isFinite(c.donenVarlikBu) && Number.isFinite(c.kvYukumlulukBu) && c.kvYukumlulukBu > 0)
+    ? c.donenVarlikBu / c.kvYukumlulukBu : null;
+  const liquidityScore = currentRatio !== null ? clamp(currentRatio * 50, 0, 100) : null;
+
   const healthParts = [
-    [marginScore, 0.4], [leverageScoreForHealth, 0.35], [roeScore, 0.25]
+    [marginScore, 0.3], [leverageScoreForHealth, 0.3], [roeScore, 0.2], [liquidityScore, 0.2]
   ].filter(p => p[0] !== null);
   scores.saglik = healthParts.length
     ? healthParts.reduce((s, p) => s + p[0] * p[1], 0) / healthParts.reduce((s, p) => s + p[1], 0)
@@ -283,7 +421,42 @@ function computeScores(c) {
       : null;
   } else scores.kapEtki = null;
 
-  const weights = { saglik: 0.25, risk: 0.2, degerleme: 0.2, sektorUyum: 0.1, portfoyUyum: 0.1, yonetim: 0.1, kapEtki: 0.05 };
+  /* Manipülasyon Riski (8. eksen) — "manipülasyon var" iddiası değildir,
+     yalnızca hissenin yapısal olarak manipülasyona ne kadar açık/kapalı
+     olduğunu gösterir. Yüksek puan = düşük risk (diğer eksenlerle tutarlı). */
+  const mcForRisk = marketCap(c);
+  const marketCapComponent = Number.isFinite(mcForRisk) ? clamp((mcForRisk / 20000) * 100, 0, 100) : null;
+  const floatComponent = Number.isFinite(c.halkaAciklik) ? clamp((c.halkaAciklik / 50) * 100, 0, 100) : null;
+  const volumeComponent = Number.isFinite(c.gunlukHacim) ? clamp((c.gunlukHacim / 50) * 100, 0, 100) : null;
+  const kapFreqComponent = Number.isFinite(c.kapSikligi) ? clamp(100 - Math.max(0, c.kapSikligi - 5) * 15, 0, 100) : null;
+  const manipParts = [
+    [marketCapComponent, 0.3], [floatComponent, 0.3], [volumeComponent, 0.25], [kapFreqComponent, 0.15]
+  ].filter(p => p[0] !== null);
+  scores.manipulasyon = manipParts.length
+    ? manipParts.reduce((s, p) => s + p[0] * p[1], 0) / manipParts.reduce((s, p) => s + p[1], 0)
+    : null;
+
+  /* Nakit Üretimi (9. eksen) — Serbest Nakit Akışı = İşletme + Yatırım
+     Nakit Akışı (çeyreklik → yıllıklandırılır). Kâr kalitesini ölçer:
+     net kâr "kağıt üzerinde" mi yoksa gerçek nakde mi dönüşüyor. */
+  const fcfBu = (Number.isFinite(c.isletmeNakitBu) && Number.isFinite(c.yatirimNakitBu))
+    ? c.isletmeNakitBu + c.yatirimNakitBu : null;
+  const annualFcf = fcfBu !== null ? fcfBu * 4 : null;
+  const fcfMargin = (annualFcf !== null && c.satisBu) ? (annualFcf / (c.satisBu * 4)) * 100 : null;
+  const annualNk = annualNetKar(c);
+  const fcfQuality = (annualFcf !== null && annualNk) ? annualFcf / annualNk : null;
+
+  const fcfMarginComponent = fcfMargin !== null ? clamp(fcfMargin * 5, 0, 100) : null;
+  const fcfQualityComponent = fcfQuality !== null ? clamp(fcfQuality * 60, 0, 100) : null;
+  const nakitParts = [[fcfMarginComponent, 0.5], [fcfQualityComponent, 0.5]].filter(p => p[0] !== null);
+  scores.nakitUretimi = nakitParts.length
+    ? nakitParts.reduce((s, p) => s + p[0] * p[1], 0) / nakitParts.reduce((s, p) => s + p[1], 0)
+    : null;
+
+  const weights = {
+    saglik: 0.20, risk: 0.15, degerleme: 0.15, sektorUyum: 0.07,
+    portfoyUyum: 0.07, yonetim: 0.07, kapEtki: 0.04, manipulasyon: 0.15, nakitUretimi: 0.10
+  };
   let wsum = 0, vsum = 0;
   for (const k in weights) {
     if (Number.isFinite(scores[k])) { wsum += weights[k]; vsum += scores[k] * weights[k]; }
@@ -308,8 +481,23 @@ function computeScores(c) {
   if (favokMarjiBu !== null && favokMarjiBu < 0) {
     notes.warnings.push(`FAVÖK marjı negatif (%${fmt1(favokMarjiBu)}) — operasyonel kârlılık sorunlu.`);
   }
+  if (Number.isFinite(scores.manipulasyon) && scores.manipulasyon < 35) {
+    notes.warnings.push(`Manipülasyon riski göstergeleri (küçük piyasa değeri / düşük halka açıklık / düşük hacim / sık KAP açıklaması) kırılgan bölgede — bu yapısal bir risk işaretidir, doğrudan bir manipülasyon iddiası değildir.`);
+  }
+  if (currentRatio !== null && currentRatio < 1) {
+    notes.warnings.push(`Cari Oran ${fmt1(currentRatio)} — dönen varlıklar kısa vadeli yükümlülükleri karşılamıyor, likidite açısından takip gerektiriyor.`);
+  }
+  if (fcfQuality !== null && fcfQuality < 0) {
+    notes.warnings.push(`Serbest Nakit Akışı negatif iken net kâr pozitif görünüyor olabilir — kârın nakde dönüşüm kalitesi zayıf.`);
+  }
 
-  return { scores, notes, derived: { favokMarjiBu, roe, netBorcFavok, profitVolatility, cFk, cPddd, cFdFavok, agirlik } };
+  return {
+    scores, notes,
+    derived: {
+      favokMarjiBu, roe, netBorcFavok, profitVolatility, cFk, cPddd, cFdFavok, agirlik,
+      currentRatio, annualFcf, fcfMargin, fcfQuality
+    }
+  };
 }
 
 function tierFor(genel) {
@@ -370,6 +558,9 @@ function generateReport(c, result) {
   if (Number.isFinite(scores.sektorUyum)) ekCumleler.push(`sektör görünümü puanı ${fmt1(scores.sektorUyum)}/100`);
   if (Number.isFinite(scores.portfoyUyum)) ekCumleler.push(`portföy uyum puanı ${fmt1(scores.portfoyUyum)}/100`);
   if (Number.isFinite(scores.kapEtki)) ekCumleler.push(`geçmiş KAP açıklamalarına piyasa tepkisi ortalama olarak ${scores.kapEtki >= 50 ? 'olumlu' : 'olumsuz'} yönde (${fmt1(scores.kapEtki)}/100)`);
+  if (Number.isFinite(scores.manipulasyon)) ekCumleler.push(`manipülasyon riski göstergesi ${fmt1(scores.manipulasyon)}/100 (yüksek puan, düşük yapısal risk anlamına gelir)`);
+  if (Number.isFinite(scores.nakitUretimi)) ekCumleler.push(`nakit üretimi puanı ${fmt1(scores.nakitUretimi)}/100${Number.isFinite(derived.fcfQuality) ? ` (serbest nakit akışı/net kâr oranı ${fmt1(derived.fcfQuality)}x)` : ''}`);
+  if (Number.isFinite(derived.currentRatio)) ekCumleler.push(`cari oran ${fmt1(derived.currentRatio)}x`);
   if (ekCumleler.length) p.push(`Tamamlayıcı göstergeler: ${ekCumleler.join('; ')}.`);
 
   const tier = tierFor(scores.genel);
@@ -389,7 +580,9 @@ const RADAR_AXES = [
   { key: 'sektorUyum', label: 'Sektör' },
   { key: 'portfoyUyum', label: 'Portföy' },
   { key: 'yonetim', label: 'Yönetim' },
-  { key: 'kapEtki', label: 'KAP' }
+  { key: 'kapEtki', label: 'KAP' },
+  { key: 'manipulasyon', label: 'Manip. Riski' },
+  { key: 'nakitUretimi', label: 'Nakit Üretimi' }
 ];
 
 function drawRadar(canvas, scores) {
@@ -477,30 +670,56 @@ function cacheEls() {
     'pfTotalCost', 'pfTotalValue', 'pfPnl', 'pfVsBenchmark', 'pfEmptyNote',
     'sectorBalance', 'sectorBars', 'sectorNarrative',
     'refreshDovizBtn', 'macroUsd', 'macroEur', 'm_tufe', 'm_faiz', 'm_cds', 'm_pmi',
-    'macroUpdated', 'saveMacroBtn', 'macroError'
+    'macroUpdated', 'saveMacroBtn', 'macroError',
+    'valuationBadge', 'valuationDetail',
+    'monthlyPanel', 'monthlyCanvas', 'monthlyEmptyNote', 'monthlyManualAy', 'monthlyManualFiyat', 'monthlyManualSaveBtn',
+    'pfBestWorstPanel', 'pfBest', 'pfWorst',
+    'financialsPanel',
+    'finSatisBu', 'finSatisOnceki', 'finBrutKarBu', 'finBrutKarOnceki', 'finFavokBu', 'finFavokOnceki',
+    'finFaaliyetKariBu', 'finFaaliyetKariOnceki', 'finNetKarBu', 'finNetKarOnceki',
+    'finDonenVarlikBu', 'finDonenVarlikOnceki', 'finDuranVarlikBu', 'finDuranVarlikOnceki',
+    'finToplamVarlikBu', 'finToplamVarlikOnceki', 'finKvBu', 'finKvOnceki', 'finUvBu', 'finUvOnceki',
+    'finOzkaynakBu', 'finOzkaynakOnceki', 'finIsletmeNakitBu', 'finIsletmeNakitOnceki',
+    'finYatirimNakitBu', 'finYatirimNakitOnceki', 'finFinansmanNakitBu', 'finFinansmanNakitOnceki',
+    'finFcfBu', 'finFcfOnceki', 'finCariOran', 'finFcfYillik'
   ].forEach(id => { els[id] = document.getElementById(id); });
 }
 
 function readForm() {
   const val = (id) => document.getElementById(id).value;
   const num = (id) => { const v = val(id); return v === '' ? null : parseFloat(v); };
+  // aylikGecmis form alanı yok (otomatik/manuel snapshot ile ayrı yönetiliyor) —
+  // kaydet formu tam üzerine yazdığı için mevcut geçmişi burada koruyoruz.
+  const existing = state.companies.find(x => x.id === state.activeId);
+  const aylikGecmis = existing && Array.isArray(existing.aylikGecmis) ? existing.aylikGecmis.slice() : [];
   return {
     id: state.activeId || ('c_' + Date.now()),
     name: val('f_name').trim() || 'İsimsiz Şirket',
     ticker: val('f_ticker').trim().toUpperCase() || '—',
     sector: val('f_sector').trim(),
     satisBu: num('f_satis_bu'), satisOnceki: num('f_satis_onceki'),
+    brutKarBu: num('f_brut_kar_bu'), brutKarOnceki: num('f_brut_kar_onceki'),
     favokBu: num('f_favok_bu'), favokOnceki: num('f_favok_onceki'),
+    faaliyetKariBu: num('f_faaliyet_kari_bu'), faaliyetKariOnceki: num('f_faaliyet_kari_onceki'),
     netkarBu: num('f_netkar_bu'), netkarOnceki: num('f_netkar_onceki'),
+    donenVarlikBu: num('f_donen_varlik_bu'), donenVarlikOnceki: num('f_donen_varlik_onceki'),
+    duranVarlikBu: num('f_duran_varlik_bu'), duranVarlikOnceki: num('f_duran_varlik_onceki'),
+    kvYukumlulukBu: num('f_kv_yukumluluk_bu'), kvYukumlulukOnceki: num('f_kv_yukumluluk_onceki'),
+    uvYukumlulukBu: num('f_uv_yukumluluk_bu'), uvYukumlulukOnceki: num('f_uv_yukumluluk_onceki'),
     netborcBu: num('f_netborc_bu'), netborcOnceki: num('f_netborc_onceki'),
     ozkaynakBu: num('f_ozkaynak_bu'), ozkaynakOnceki: num('f_ozkaynak_onceki'),
+    isletmeNakitBu: num('f_isletme_nakit_bu'), isletmeNakitOnceki: num('f_isletme_nakit_onceki'),
+    yatirimNakitBu: num('f_yatirim_nakit_bu'), yatirimNakitOnceki: num('f_yatirim_nakit_onceki'),
+    finansmanNakitBu: num('f_finansman_nakit_bu'), finansmanNakitOnceki: num('f_finansman_nakit_onceki'),
     fkSektor: num('f_fk_sektor'), pdddSektor: num('f_pddd_sektor'), fdfavokSektor: num('f_fdfavok_sektor'),
     sozVerilen: num('f_soz_verilen'), sozGerceklesen: num('f_soz_gerceklesen'),
     guncelFiyat: num('f_guncel_fiyat'), fiyatTarihi: val('f_fiyat_tarihi') || null,
     maliyetFiyati: num('f_maliyet_fiyati'), adet: num('f_adet'), toplamHisse: num('f_toplam_hisse'),
     sektorGorunum: num('f_sektor_gorunum'),
+    halkaAciklik: num('f_halka_aciklik'), gunlukHacim: num('f_gunluk_hacim'), kapSikligi: num('f_kap_sikligi'),
     kap: state.kapDraft.slice(),
-    kapRapor: state.kapRaporDraft.slice()
+    kapRapor: state.kapRaporDraft.slice(),
+    aylikGecmis
   };
 }
 
@@ -508,16 +727,26 @@ function fillForm(c) {
   const set = (id, v) => { document.getElementById(id).value = (v === null || v === undefined) ? '' : v; };
   set('f_name', c.name); set('f_ticker', c.ticker); set('f_sector', c.sector);
   set('f_satis_bu', c.satisBu); set('f_satis_onceki', c.satisOnceki);
+  set('f_brut_kar_bu', c.brutKarBu); set('f_brut_kar_onceki', c.brutKarOnceki);
   set('f_favok_bu', c.favokBu); set('f_favok_onceki', c.favokOnceki);
+  set('f_faaliyet_kari_bu', c.faaliyetKariBu); set('f_faaliyet_kari_onceki', c.faaliyetKariOnceki);
   set('f_netkar_bu', c.netkarBu); set('f_netkar_onceki', c.netkarOnceki);
+  set('f_donen_varlik_bu', c.donenVarlikBu); set('f_donen_varlik_onceki', c.donenVarlikOnceki);
+  set('f_duran_varlik_bu', c.duranVarlikBu); set('f_duran_varlik_onceki', c.duranVarlikOnceki);
+  set('f_kv_yukumluluk_bu', c.kvYukumlulukBu); set('f_kv_yukumluluk_onceki', c.kvYukumlulukOnceki);
+  set('f_uv_yukumluluk_bu', c.uvYukumlulukBu); set('f_uv_yukumluluk_onceki', c.uvYukumlulukOnceki);
   set('f_netborc_bu', c.netborcBu); set('f_netborc_onceki', c.netborcOnceki);
   set('f_ozkaynak_bu', c.ozkaynakBu); set('f_ozkaynak_onceki', c.ozkaynakOnceki);
+  set('f_isletme_nakit_bu', c.isletmeNakitBu); set('f_isletme_nakit_onceki', c.isletmeNakitOnceki);
+  set('f_yatirim_nakit_bu', c.yatirimNakitBu); set('f_yatirim_nakit_onceki', c.yatirimNakitOnceki);
+  set('f_finansman_nakit_bu', c.finansmanNakitBu); set('f_finansman_nakit_onceki', c.finansmanNakitOnceki);
   set('f_fk_sektor', c.fkSektor); set('f_pddd_sektor', c.pdddSektor); set('f_fdfavok_sektor', c.fdfavokSektor);
   set('f_soz_verilen', c.sozVerilen); set('f_soz_gerceklesen', c.sozGerceklesen);
   set('f_guncel_fiyat', c.guncelFiyat); set('f_fiyat_tarihi', c.fiyatTarihi);
   set('f_maliyet_fiyati', c.maliyetFiyati); set('f_adet', c.adet); set('f_toplam_hisse', c.toplamHisse);
   set('f_sektor_gorunum', c.sektorGorunum || 5);
   els.sektorGorunumOut.textContent = c.sektorGorunum || 5;
+  set('f_halka_aciklik', c.halkaAciklik); set('f_gunluk_hacim', c.gunlukHacim); set('f_kap_sikligi', c.kapSikligi);
   state.kapDraft = (c.kap || []).map(k => ({ ...k }));
   state.kapRaporDraft = (c.kapRapor || []).map(k => ({ ...k }));
   renderKapEntries();
@@ -717,6 +946,78 @@ function renderDashboard(c) {
       els.fvMarker.style.left = '50%';
       els.fvNote.textContent = 'Değer aralığı hesaplamak için toplam hisse sayısı ve en az bir sektör ortalama çarpanı gerekiyor.';
     }
+
+    if (els.valuationBadge) {
+      const valSum = valuationSummary(c, derived);
+      if (valSum) {
+        const tagCls = valSum.overall === 'ucuz' ? 'pos' : valSum.overall === 'pahali' ? 'neg' : 'notr';
+        const tagText = valSum.overall === 'ucuz' ? 'Sektöre Göre Ucuz'
+          : valSum.overall === 'pahali' ? 'Sektöre Göre Pahalı' : 'Sektör Ortalamasına Yakın';
+        els.valuationBadge.className = 'tag ' + tagCls;
+        els.valuationBadge.textContent = tagText;
+        const callLabel = (call) => call === 'ucuz' ? 'ucuz' : call === 'pahali' ? 'pahalı' : 'makul';
+        els.valuationDetail.textContent = valSum.items.map(i => `${i.label}: ${callLabel(i.call)}`).join(' · ') +
+          ` — ${valSum.total} çarpandan hesaplandı, al/sat tavsiyesi değildir.`;
+      } else {
+        els.valuationBadge.className = 'tag notr';
+        els.valuationBadge.textContent = '—';
+        els.valuationDetail.textContent = 'Değerlendirme için en az bir sektör ortalama çarpanı gerekiyor.';
+      }
+    }
+  }
+
+  /* Özet Mali Tablolar paneli */
+  if (els.financialsPanel) {
+    const hasAnyFin = [
+      c.satisBu, c.brutKarBu, c.favokBu, c.faaliyetKariBu, c.netkarBu,
+      c.donenVarlikBu, c.duranVarlikBu, c.kvYukumlulukBu, c.uvYukumlulukBu, c.ozkaynakBu,
+      c.isletmeNakitBu, c.yatirimNakitBu, c.finansmanNakitBu
+    ].some(v => Number.isFinite(v));
+    els.financialsPanel.hidden = !hasAnyFin;
+    if (hasAnyFin) {
+      els.finSatisBu.textContent = fmtMn(c.satisBu); els.finSatisOnceki.textContent = fmtMn(c.satisOnceki);
+      els.finBrutKarBu.textContent = fmtMn(c.brutKarBu); els.finBrutKarOnceki.textContent = fmtMn(c.brutKarOnceki);
+      els.finFavokBu.textContent = fmtMn(c.favokBu); els.finFavokOnceki.textContent = fmtMn(c.favokOnceki);
+      els.finFaaliyetKariBu.textContent = fmtMn(c.faaliyetKariBu); els.finFaaliyetKariOnceki.textContent = fmtMn(c.faaliyetKariOnceki);
+      els.finNetKarBu.textContent = fmtMn(c.netkarBu); els.finNetKarOnceki.textContent = fmtMn(c.netkarOnceki);
+
+      els.finDonenVarlikBu.textContent = fmtMn(c.donenVarlikBu); els.finDonenVarlikOnceki.textContent = fmtMn(c.donenVarlikOnceki);
+      els.finDuranVarlikBu.textContent = fmtMn(c.duranVarlikBu); els.finDuranVarlikOnceki.textContent = fmtMn(c.duranVarlikOnceki);
+      const toplamVarlikBu = (Number.isFinite(c.donenVarlikBu) || Number.isFinite(c.duranVarlikBu))
+        ? (c.donenVarlikBu || 0) + (c.duranVarlikBu || 0) : null;
+      const toplamVarlikOnceki = (Number.isFinite(c.donenVarlikOnceki) || Number.isFinite(c.duranVarlikOnceki))
+        ? (c.donenVarlikOnceki || 0) + (c.duranVarlikOnceki || 0) : null;
+      els.finToplamVarlikBu.textContent = fmtMn(toplamVarlikBu); els.finToplamVarlikOnceki.textContent = fmtMn(toplamVarlikOnceki);
+      els.finKvBu.textContent = fmtMn(c.kvYukumlulukBu); els.finKvOnceki.textContent = fmtMn(c.kvYukumlulukOnceki);
+      els.finUvBu.textContent = fmtMn(c.uvYukumlulukBu); els.finUvOnceki.textContent = fmtMn(c.uvYukumlulukOnceki);
+      els.finOzkaynakBu.textContent = fmtMn(c.ozkaynakBu); els.finOzkaynakOnceki.textContent = fmtMn(c.ozkaynakOnceki);
+
+      els.finIsletmeNakitBu.textContent = fmtMn(c.isletmeNakitBu); els.finIsletmeNakitOnceki.textContent = fmtMn(c.isletmeNakitOnceki);
+      els.finYatirimNakitBu.textContent = fmtMn(c.yatirimNakitBu); els.finYatirimNakitOnceki.textContent = fmtMn(c.yatirimNakitOnceki);
+      els.finFinansmanNakitBu.textContent = fmtMn(c.finansmanNakitBu); els.finFinansmanNakitOnceki.textContent = fmtMn(c.finansmanNakitOnceki);
+      const fcfBuVal = (Number.isFinite(c.isletmeNakitBu) && Number.isFinite(c.yatirimNakitBu)) ? c.isletmeNakitBu + c.yatirimNakitBu : null;
+      const fcfOncekiVal = (Number.isFinite(c.isletmeNakitOnceki) && Number.isFinite(c.yatirimNakitOnceki)) ? c.isletmeNakitOnceki + c.yatirimNakitOnceki : null;
+      els.finFcfBu.textContent = fmtMn(fcfBuVal); els.finFcfOnceki.textContent = fmtMn(fcfOncekiVal);
+
+      els.finCariOran.textContent = Number.isFinite(derived.currentRatio) ? fmt1(derived.currentRatio) + 'x' : '—';
+      els.finFcfYillik.textContent = Number.isFinite(derived.annualFcf) ? fmtMn(derived.annualFcf) : '—';
+    }
+  }
+
+  /* Aylık Performans Takibi paneli */
+  if (els.monthlyPanel) {
+    els.monthlyPanel.hidden = false;
+    const hist = Array.isArray(c.aylikGecmis) ? c.aylikGecmis.slice().sort((a, b) => a.ay.localeCompare(b.ay)) : [];
+    const maliyet = c.maliyetFiyati;
+    if (hist.length && Number.isFinite(maliyet) && maliyet !== 0) {
+      els.monthlyEmptyNote.hidden = true;
+      els.monthlyCanvas.hidden = false;
+      const points = hist.map(h => ({ ay: h.ay, pnl: ((h.fiyat - maliyet) / maliyet) * 100 }));
+      drawMonthlyChart(els.monthlyCanvas, points);
+    } else {
+      els.monthlyEmptyNote.hidden = false;
+      els.monthlyCanvas.hidden = true;
+    }
   }
 
   const paragraphs = generateReport(c, result);
@@ -758,9 +1059,26 @@ function renderPortfolioSummary() {
     els.pfPnl.textContent = '—';
     els.pfVsBenchmark.textContent = '—';
     els.sectorBalance.hidden = true;
+    if (els.pfBestWorstPanel) els.pfBestWorstPanel.hidden = true;
     return;
   }
   els.pfEmptyNote.hidden = true;
+
+  // En çok kazandıran / en çok kaybettiren (maliyet bazlı kâr/zarar %)
+  if (els.pfBestWorstPanel) {
+    const withPnl = rows
+      .map(r => ({ c: r.c, pnlPct: r.cost !== 0 ? ((r.val - r.cost) / r.cost) * 100 : null }))
+      .filter(r => r.pnlPct !== null);
+    if (withPnl.length) {
+      const best = withPnl.reduce((a, b) => (b.pnlPct > a.pnlPct ? b : a));
+      const worst = withPnl.reduce((a, b) => (b.pnlPct < a.pnlPct ? b : a));
+      els.pfBestWorstPanel.hidden = false;
+      els.pfBest.textContent = `${best.c.ticker} · ${fmtPct(best.pnlPct)}`;
+      els.pfWorst.textContent = `${worst.c.ticker} · ${fmtPct(worst.pnlPct)}`;
+    } else {
+      els.pfBestWorstPanel.hidden = true;
+    }
+  }
 
   const totalCost = rows.reduce((s, r) => s + r.cost, 0);
   const totalValue = rows.reduce((s, r) => s + r.val, 0);
@@ -897,6 +1215,8 @@ function init() {
   els.refreshDovizBtn.addEventListener('click', rvFetchDovizKurlari);
   els.saveMacroBtn.addEventListener('click', handleSaveMacro);
   rvFetchDovizKurlari();
+
+  if (els.monthlyManualSaveBtn) els.monthlyManualSaveBtn.addEventListener('click', handleMonthlyManualSave);
 }
 
 document.addEventListener('DOMContentLoaded', init);

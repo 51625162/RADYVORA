@@ -677,3 +677,58 @@ a{ color: var(--brass); }
   font-size: 12px;
   font-family: var(--font-mono);
 }
+
+/* ============================================================
+   YENİ ÖZELLİKLER — Ucuz/Pahalı göstergesi, Aylık Performans
+   Takibi, Özet Mali Tablolar paneli
+   ============================================================ */
+.valuation-summary{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--surface-2);
+  flex-wrap: wrap;
+}
+.valuation-detail{
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+.monthly-panel{
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--surface-2);
+}
+.monthly-panel canvas{
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 8px 0;
+}
+.monthly-manual-row{
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.monthly-manual-row label{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.monthly-manual-row input{
+  background: var(--surface-2);
+  border: 1px solid var(--brass-dim);
+  color: var(--text);
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.financials-panel .multiples-table{ margin-top: 6px; }

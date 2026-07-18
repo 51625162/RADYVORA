@@ -85,6 +85,17 @@
 
     <div id="pfEmptyNote" class="muted-note">Şirketlere güncel fiyat ve adet girdiğinde portföy özeti burada oluşur.</div>
 
+    <div id="pfBestWorstPanel" class="portfolio-cards" hidden>
+      <div class="portfolio-card">
+        <span class="portfolio-card__label">🏆 En Çok Kazandıran</span>
+        <span class="portfolio-card__value" id="pfBest" style="color:var(--green)">—</span>
+      </div>
+      <div class="portfolio-card">
+        <span class="portfolio-card__label">📉 En Çok Kaybettiren</span>
+        <span class="portfolio-card__value" id="pfWorst" style="color:var(--red)">—</span>
+      </div>
+    </div>
+
     <div id="sectorBalance" class="sector-balance" hidden>
       <h3 class="panel-title">Sektör Denge Dağılımı</h3>
       <ul id="sectorBars" class="sector-bars"></ul>
@@ -175,14 +186,20 @@
       </div>
 
       <details class="accordion" open>
-        <summary>1 · Bilanço — Bu Çeyrek / Önceki Çeyrek</summary>
+        <summary>1 · Özet Bilanço &amp; Gelir Tablosu — Bu Çeyrek / Önceki Çeyrek</summary>
         <div class="grid-2 grid-header">
           <span></span><span class="col-label">Bu Çeyrek</span><span class="col-label">Önceki Çeyrek</span>
         </div>
+        <p class="hint" style="margin-top:0;">Gelir Tablosu</p>
         <div class="grid-2">
           <label>Net Satışlar (mn ₺)</label>
           <input type="number" step="any" id="f_satis_bu">
           <input type="number" step="any" id="f_satis_onceki">
+        </div>
+        <div class="grid-2">
+          <label>Brüt Kâr (mn ₺)</label>
+          <input type="number" step="any" id="f_brut_kar_bu">
+          <input type="number" step="any" id="f_brut_kar_onceki">
         </div>
         <div class="grid-2">
           <label>FAVÖK (mn ₺)</label>
@@ -190,9 +207,35 @@
           <input type="number" step="any" id="f_favok_onceki">
         </div>
         <div class="grid-2">
+          <label>Faaliyet Kârı / EBİT (mn ₺)</label>
+          <input type="number" step="any" id="f_faaliyet_kari_bu">
+          <input type="number" step="any" id="f_faaliyet_kari_onceki">
+        </div>
+        <div class="grid-2">
           <label>Net Kâr (mn ₺)</label>
           <input type="number" step="any" id="f_netkar_bu">
           <input type="number" step="any" id="f_netkar_onceki">
+        </div>
+        <p class="hint">Bilanço</p>
+        <div class="grid-2">
+          <label>Dönen Varlıklar (mn ₺)</label>
+          <input type="number" step="any" id="f_donen_varlik_bu">
+          <input type="number" step="any" id="f_donen_varlik_onceki">
+        </div>
+        <div class="grid-2">
+          <label>Duran Varlıklar (mn ₺)</label>
+          <input type="number" step="any" id="f_duran_varlik_bu">
+          <input type="number" step="any" id="f_duran_varlik_onceki">
+        </div>
+        <div class="grid-2">
+          <label>Kısa Vadeli Yükümlülükler (mn ₺)</label>
+          <input type="number" step="any" id="f_kv_yukumluluk_bu">
+          <input type="number" step="any" id="f_kv_yukumluluk_onceki">
+        </div>
+        <div class="grid-2">
+          <label>Uzun Vadeli Yükümlülükler (mn ₺)</label>
+          <input type="number" step="any" id="f_uv_yukumluluk_bu">
+          <input type="number" step="any" id="f_uv_yukumluluk_onceki">
         </div>
         <div class="grid-2">
           <label>Net Borç (mn ₺)</label>
@@ -207,8 +250,31 @@
       </details>
 
       <details class="accordion">
-        <summary>2 · Sektör Ortalama Çarpanları</summary>
-        <p class="hint">Şirketin kendi çarpanlarını artık elle girmene gerek yok — güncel fiyat ve hisse sayısından otomatik hesaplanıyor (bkz. bölüm 5). Burada yalnızca kıyaslama için sektör ortalamasını gir.</p>
+        <summary>2 · Özet Nakit Akış Tablosu — Bu Çeyrek / Önceki Çeyrek</summary>
+        <div class="grid-2 grid-header">
+          <span></span><span class="col-label">Bu Çeyrek</span><span class="col-label">Önceki Çeyrek</span>
+        </div>
+        <div class="grid-2">
+          <label>İşletme Faaliyetlerinden Nakit Akışı (mn ₺)</label>
+          <input type="number" step="any" id="f_isletme_nakit_bu">
+          <input type="number" step="any" id="f_isletme_nakit_onceki">
+        </div>
+        <div class="grid-2">
+          <label>Yatırım Faaliyetlerinden Nakit Akışı (mn ₺)</label>
+          <input type="number" step="any" id="f_yatirim_nakit_bu">
+          <input type="number" step="any" id="f_yatirim_nakit_onceki">
+        </div>
+        <div class="grid-2">
+          <label>Finansman Faaliyetlerinden Nakit Akışı (mn ₺)</label>
+          <input type="number" step="any" id="f_finansman_nakit_bu">
+          <input type="number" step="any" id="f_finansman_nakit_onceki">
+        </div>
+        <p class="hint">Serbest Nakit Akışı otomatik hesaplanır (İşletme + Yatırım Nakit Akışı).</p>
+      </details>
+
+      <details class="accordion">
+        <summary>3 · Sektör Ortalama Çarpanları</summary>
+        <p class="hint">Şirketin kendi çarpanlarını artık elle girmene gerek yok — güncel fiyat ve hisse sayısından otomatik hesaplanıyor (bkz. bölüm 6). Burada yalnızca kıyaslama için sektör ortalamasını gir.</p>
         <div class="field-row">
           <label>Sektör Ort. F/K
             <input type="number" step="any" id="f_fk_sektor">
@@ -223,7 +289,7 @@
       </details>
 
       <details class="accordion">
-        <summary>3 · Yönetim Takibi</summary>
+        <summary>4 · Yönetim Takibi</summary>
         <div class="field-row">
           <label>Verilen Söz Sayısı
             <input type="number" min="0" step="1" id="f_soz_verilen">
@@ -235,14 +301,14 @@
       </details>
 
       <details class="accordion">
-        <summary>4 · KAP Etki Kayıtları</summary>
+        <summary>5 · KAP Etki Kayıtları</summary>
         <p class="hint">Geçmiş KAP açıklamalarını ve ertesi gün fiyat tepkisini kaydedin.</p>
         <div id="kapEntries" class="kap-entries"></div>
         <button type="button" id="addKapBtn" class="btn btn--ghost">+ KAP Kaydı Ekle</button>
       </details>
 
       <details class="accordion">
-        <summary>5 · Portföy Pozisyonu</summary>
+        <summary>6 · Portföy Pozisyonu</summary>
         <p class="hint">Portföy ağırlığın artık elle girilmiyor — buradaki verilerden otomatik hesaplanıyor.</p>
         <div class="field-row">
           <label>Güncel Fiyat (₺)
@@ -264,7 +330,7 @@
       </details>
 
       <details class="accordion">
-        <summary>6 · Sektör &amp; Makro Görünüm</summary>
+        <summary>7 · Sektör &amp; Makro Görünüm</summary>
         <div class="field-row">
           <label>Sektör Görünümü <span class="range-out" id="sektorGorunumOut">5</span>/10
             <input type="range" min="1" max="10" step="1" id="f_sektor_gorunum" value="5">
@@ -273,7 +339,23 @@
       </details>
 
       <details class="accordion">
-        <summary>7 · KAP Faaliyet Raporları</summary>
+        <summary>8 · Manipülasyon Riski Girdileri</summary>
+        <p class="hint">Bu girdiler "manipülasyon var" demez — yalnızca hissenin yapısal olarak manipülasyona ne kadar açık olduğunu gösterir (küçük piyasa değeri + düşük halka açıklık + düşük hacim + sık KAP açıklaması = daha kırılgan).</p>
+        <div class="field-row">
+          <label>Halka Açıklık Oranı (%)
+            <input type="number" step="any" min="0" max="100" id="f_halka_aciklik">
+          </label>
+          <label>Ort. Günlük İşlem Hacmi (mn ₺)
+            <input type="number" step="any" min="0" id="f_gunluk_hacim">
+          </label>
+          <label>Son 3 Ayda KAP Özel Durum Sayısı
+            <input type="number" step="1" min="0" id="f_kap_sikligi">
+          </label>
+        </div>
+      </details>
+
+      <details class="accordion">
+        <summary>9 · KAP Faaliyet Raporları</summary>
         <p class="hint">PDF'i kopyalamıyoruz — KAP'taki ilgili bildirime doğrudan bağlantı veriyoruz. İstersen kendi kısa özetini de ekleyebilirsin.</p>
         <div id="kapRaporEntries" class="kap-rapor-entries"></div>
         <button type="button" id="addKapRaporBtn" class="btn btn--ghost">+ Faaliyet Raporu Ekle</button>
@@ -357,7 +439,60 @@
             <span id="fvHigh">—</span>
           </div>
           <p class="fair-value-note" id="fvNote">Bu bir hedef fiyat değildir — yalnızca girilen sektör çarpanlarına göre olası bir aralıktır. Varsayımları değiştirirsen aralık da değişir.</p>
+          <div id="valuationSummary" class="valuation-summary">
+            <span id="valuationBadge" class="tag notr">—</span>
+            <span id="valuationDetail" class="valuation-detail"></span>
+          </div>
         </div>
+
+        <div class="panel monthly-panel" id="monthlyPanel" hidden>
+          <h3 class="panel-title" style="border:none;padding:0;margin-bottom:8px;">Aylık Performans Takibi</h3>
+          <p class="hint">Her ay ilk açılışta güncel fiyat otomatik kaydedilir (maliyet bazlı kâr/zarar %). Gerekirse elle ekleyip düzeltebilirsin.</p>
+          <canvas id="monthlyCanvas" width="560" height="200"></canvas>
+          <div id="monthlyEmptyNote" class="muted-note">Henüz kayıt yok — bu ay siteyi açtığında otomatik eklenecek (güncel fiyat girilmiş olmalı).</div>
+          <div class="monthly-manual-row">
+            <label>Ay
+              <input type="month" id="monthlyManualAy">
+            </label>
+            <label>Fiyat (₺)
+              <input type="number" step="any" id="monthlyManualFiyat">
+            </label>
+            <button type="button" id="monthlyManualSaveBtn" class="btn btn--ghost">Ekle / Güncelle</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel financials-panel" id="financialsPanel" hidden>
+        <h3 class="panel-title">Özet Mali Tablolar (Bu Çeyrek)</h3>
+        <div class="multiples-table">
+          <div class="multiples-row multiples-row--head"><span></span><span>Bu Çeyrek</span><span>Önceki Çeyrek</span></div>
+          <div class="multiples-row"><span>Net Satışlar</span><span id="finSatisBu">—</span><span id="finSatisOnceki">—</span></div>
+          <div class="multiples-row"><span>Brüt Kâr</span><span id="finBrutKarBu">—</span><span id="finBrutKarOnceki">—</span></div>
+          <div class="multiples-row"><span>FAVÖK</span><span id="finFavokBu">—</span><span id="finFavokOnceki">—</span></div>
+          <div class="multiples-row"><span>Faaliyet Kârı</span><span id="finFaaliyetKariBu">—</span><span id="finFaaliyetKariOnceki">—</span></div>
+          <div class="multiples-row"><span>Net Kâr</span><span id="finNetKarBu">—</span><span id="finNetKarOnceki">—</span></div>
+          <div class="multiples-row"><span>Dönen Varlıklar</span><span id="finDonenVarlikBu">—</span><span id="finDonenVarlikOnceki">—</span></div>
+          <div class="multiples-row"><span>Duran Varlıklar</span><span id="finDuranVarlikBu">—</span><span id="finDuranVarlikOnceki">—</span></div>
+          <div class="multiples-row"><span>Toplam Varlıklar</span><span id="finToplamVarlikBu">—</span><span id="finToplamVarlikOnceki">—</span></div>
+          <div class="multiples-row"><span>KV Yükümlülükler</span><span id="finKvBu">—</span><span id="finKvOnceki">—</span></div>
+          <div class="multiples-row"><span>UV Yükümlülükler</span><span id="finUvBu">—</span><span id="finUvOnceki">—</span></div>
+          <div class="multiples-row"><span>Özkaynaklar</span><span id="finOzkaynakBu">—</span><span id="finOzkaynakOnceki">—</span></div>
+          <div class="multiples-row"><span>İşletme Nakit Akışı</span><span id="finIsletmeNakitBu">—</span><span id="finIsletmeNakitOnceki">—</span></div>
+          <div class="multiples-row"><span>Yatırım Nakit Akışı</span><span id="finYatirimNakitBu">—</span><span id="finYatirimNakitOnceki">—</span></div>
+          <div class="multiples-row"><span>Finansman Nakit Akışı</span><span id="finFinansmanNakitBu">—</span><span id="finFinansmanNakitOnceki">—</span></div>
+          <div class="multiples-row"><span>Serbest Nakit Akışı</span><span id="finFcfBu">—</span><span id="finFcfOnceki">—</span></div>
+        </div>
+        <div class="position-cards" style="margin-top:12px;">
+          <div class="position-card">
+            <span class="position-card__label">Cari Oran</span>
+            <span class="position-card__value" id="finCariOran">—</span>
+          </div>
+          <div class="position-card">
+            <span class="position-card__label">Yıllık Serbest Nakit Akışı</span>
+            <span class="position-card__value" id="finFcfYillik">—</span>
+          </div>
+        </div>
+        <p class="fair-value-note">Cari Oran = Dönen Varlıklar / KV Yükümlülükler. Serbest Nakit Akışı = İşletme + Yatırım Nakit Akışı (çeyreklik değer × 4 ile yıllıklandırılır). Bu tablo bir tavsiye değildir, yalnızca girilen verilerin özetidir.</p>
       </div>
 
       <div class="panel report-panel">
