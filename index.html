@@ -204,6 +204,16 @@
         <button type="button" id="deleteCompanyBtn" class="btn btn--ghost btn--danger">Sil</button>
       </div>
 
+      <div class="ai-fill-box">
+        <p class="ai-fill-box__title">🤖 AI ile Otomatik Doldur</p>
+        <p class="hint">KAP'tan indirdiğin bilanço PDF'ini veya Excel dosyasını yükle — Özet Bilanço, Gelir Tablosu ve Nakit Akış alanları otomatik dolsun. Doldurulanları kaydetmeden önce mutlaka gözden geçir.</p>
+        <div class="ai-fill-row">
+          <input type="file" id="aiFileInput" accept=".pdf,.xlsx,.xls">
+          <button type="button" id="aiExtractBtn" class="btn btn--primary">Yükle ve Doldur</button>
+        </div>
+        <p id="aiExtractStatus" class="ai-fill-status"></p>
+      </div>
+
       <div class="field-row">
         <label>Şirket Adı
           <input type="text" id="f_name" placeholder="Örn. Örnek Sanayi A.Ş." required>
@@ -584,7 +594,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="firebase-config.js"></script>
+<script src="ai-config.js"></script>
 <script src="auth.js"></script>
 <script src="script.js"></script>
 </body>

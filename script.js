@@ -222,6 +222,122 @@ function fairValueRange(c) {
   };
 }
 
+/* ================================================================
+   AI İLE OTOMATİK MALİ TABLO DOLDURMA
+   PDF/Excel → Cloudflare Worker → Anthropic API → JSON → form alanları.
+   Kurulum: bkz. AI-KURULUM.md. Worker adresi ai-config.js'de.
+================================================================ */
+function rvSetAiStatus(msg, isError, isOk) {
+  if (!els.aiExtractStatus) return;
+  els.aiExtractStatus.textContent = msg;
+  els.aiExtractStatus.className = 'ai-fill-status' + (isError ? ' is-error' : isOk ? ' is-ok' : '');
+}
+
+function rvFileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = () => reject(new Error('Dosya okunamadı.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function rvExcelToText(file) {
+  return new Promise((resolve, reject) => {
+    if (typeof XLSX === 'undefined') { reject(new Error('Excel kütüphanesi yüklenemedi.')); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        let text = '';
+        wb.SheetNames.forEach((name) => {
+          text += `\n--- ${name} ---\n` + XLSX.utils.sheet_to_csv(wb.Sheets[name]);
+        });
+        resolve(text);
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('Excel dosyası okunamadı.'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function rvFillFormFromAi(json) {
+  const setVal = (id, v) => {
+    const el = document.getElementById(id);
+    if (el && Number.isFinite(v)) el.value = v;
+  };
+  const mapPeriod = (period, suffix) => {
+    if (!period) return;
+    setVal('f_satis_' + suffix, period.satis);
+    setVal('f_brut_kar_' + suffix, period.brut_kar);
+    setVal('f_favok_' + suffix, period.favok);
+    setVal('f_faaliyet_kari_' + suffix, period.faaliyet_kari);
+    setVal('f_netkar_' + suffix, period.net_kar);
+    setVal('f_donen_varlik_' + suffix, period.donen_varlik);
+    setVal('f_duran_varlik_' + suffix, period.duran_varlik);
+    setVal('f_kv_yukumluluk_' + suffix, period.kv_yukumluluk);
+    setVal('f_uv_yukumluluk_' + suffix, period.uv_yukumluluk);
+    setVal('f_netborc_' + suffix, period.net_borc);
+    setVal('f_ozkaynak_' + suffix, period.ozkaynaklar);
+    setVal('f_isletme_nakit_' + suffix, period.isletme_nakit);
+    setVal('f_yatirim_nakit_' + suffix, period.yatirim_nakit);
+    setVal('f_finansman_nakit_' + suffix, period.finansman_nakit);
+  };
+  mapPeriod(json.bu_donem, 'bu');
+  mapPeriod(json.onceki_donem, 'onceki');
+  const acc1 = document.getElementById('accordion-1'); if (acc1) acc1.open = true;
+  const acc2 = document.getElementById('accordion-2'); if (acc2) acc2.open = true;
+}
+
+async function handleAiExtract() {
+  if (typeof rvWorkerConfigured !== 'function' || !rvWorkerConfigured()) {
+    rvSetAiStatus('Önce ai-config.js dosyasına Cloudflare Worker adresini eklemelisin (bkz. AI-KURULUM.md).', true);
+    return;
+  }
+  const file = els.aiFileInput.files[0];
+  if (!file) { rvSetAiStatus('Önce bir PDF veya Excel dosyası seç.', true); return; }
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['pdf', 'xlsx', 'xls'].includes(ext)) {
+    rvSetAiStatus('Sadece PDF veya Excel (.xlsx/.xls) dosyası yükleyebilirsin.', true);
+    return;
+  }
+
+  els.aiExtractBtn.disabled = true;
+  rvSetAiStatus('Okunuyor…');
+
+  try {
+    let payload;
+    if (ext === 'pdf') {
+      rvSetAiStatus('PDF okunuyor…');
+      const base64 = await rvFileToBase64(file);
+      payload = { action: 'extract_financials', kind: 'pdf', data: base64 };
+    } else {
+      rvSetAiStatus('Excel okunuyor…');
+      const text = await rvExcelToText(file);
+      payload = { action: 'extract_financials', kind: 'text', data: text };
+    }
+
+    rvSetAiStatus('Yapay zeka mali tabloyu okuyor… (birkaç saniye sürebilir)');
+    const res = await fetch(RV_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) {
+      rvSetAiStatus('Hata: ' + (json.error || 'bilinmeyen bir sorun oluştu.'), true);
+      return;
+    }
+    rvFillFormFromAi(json);
+    rvSetAiStatus('Dolduruldu — kaydetmeden önce değerleri mutlaka gözden geçir.', false, true);
+  } catch (e) {
+    rvSetAiStatus('Hata: ' + e.message, true);
+  } finally {
+    els.aiExtractBtn.disabled = false;
+  }
+}
+
 /**
  * Sektöre göre "Ucuz / Makul / Pahalı" göstergesi.
  * Ekstra veri girişi gerekmez — zaten girilen fiyat + sektör ortalama
@@ -800,7 +916,8 @@ function cacheEls() {
     'finFcfBu', 'finFcfOnceki', 'finCariOran', 'finFcfYillik',
     'sidebarToggle', 'sidebarBackdrop', 'sectionNav',
     'sectorSensitivityPanel', 'sectorSensitivityList',
-    'sectorComparePanel', 'sectorCompareHint', 'sectorCompareTable'
+    'sectorComparePanel', 'sectorCompareHint', 'sectorCompareTable',
+    'aiFileInput', 'aiExtractBtn', 'aiExtractStatus'
   ].forEach(id => { els[id] = document.getElementById(id); });
 }
 
@@ -1393,6 +1510,7 @@ function init() {
   rvFetchDovizKurlari();
 
   if (els.monthlyManualSaveBtn) els.monthlyManualSaveBtn.addEventListener('click', handleMonthlyManualSave);
+  if (els.aiExtractBtn) els.aiExtractBtn.addEventListener('click', handleAiExtract);
 
   /* Sol kenar çubuğu (Şirket Defteri) — ☰ ile aç/kapa */
   const appShellEl = document.getElementById('appShell');
