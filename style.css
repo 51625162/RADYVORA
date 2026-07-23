@@ -1012,3 +1012,130 @@ input::placeholder, textarea::placeholder{ color: #A6AEC2; }
   font-size: 13px;
 }
 .fin-input input:focus{ outline: 1px solid var(--primary); border-color: var(--primary); }
+
+/* ============================================================
+   SEKME NAVİGASYONU (dashboard içi) — Özet / Pozisyon / Mali
+   Tablolar / Sektör / KAP & Yönetim
+   ============================================================ */
+.tab-nav{
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
+}
+.tab-nav__btn{
+  flex: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 13.5px;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab-nav__btn:hover{ color: var(--text); }
+.tab-nav__btn.is-active{
+  color: var(--primary-dim);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+.tab-pane{ display: none; }
+.tab-pane.is-active{ display: block; }
+
+/* ---------- Değerleme Skoru (gradient gauge) ---------- */
+.value-gauge{ margin: 10px 0 14px; }
+.value-gauge__track{
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary) 0%, #E8D96B 50%, var(--red) 100%);
+}
+.value-gauge__marker{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 20px;
+  background: var(--text);
+  border: 2px solid #fff;
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 4px rgba(16,23,40,0.3);
+  transition: left .3s ease;
+}
+.value-gauge__labels{
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Özet Mali Tablolar — iki kolonlu, pill'li ---------- */
+.fin-summary-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 8px;
+}
+@media (max-width: 720px){
+  .fin-summary-grid{ grid-template-columns: 1fr; }
+}
+.fin-summary-col{ min-width: 0; }
+.fin-summary-col--full{ margin-top: 20px; }
+.fin-summary-col__title{
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+.fin-summary-row{
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 0.8fr;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12px;
+}
+.fin-summary-row--head{
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--line);
+}
+.fin-pill{
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--primary-soft);
+  color: var(--primary-dim);
+  text-align: center;
+}
+.fin-pill--muted{
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+.fin-pill:empty::before{ content: '—'; }
+.fin-chg{
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+.fin-chg.pos{ color: var(--primary-dim); }
+.fin-chg.neg{ color: var(--red); }
+.fin-chg.notr{ color: var(--text-dim); }

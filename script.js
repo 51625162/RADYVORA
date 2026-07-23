@@ -9,6 +9,25 @@ const fmt1 = (v) => (Number.isFinite(v) ? v.toFixed(1) : '—');
 const fmtPct = (v) => (Number.isFinite(v) ? (v > 0 ? '+' : '') + v.toFixed(1) + '%' : '—');
 const fmtMoney = (v) => (Number.isFinite(v) ? v.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : '—');
 const fmtMn = (v) => (Number.isFinite(v) ? v.toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' mn ₺' : '—');
+
+/* Özet Mali Tablolar satırı: Bu/Önceki pill'lerini ve değişim % rozetini doldurur. */
+function renderFinRow(prefix, buVal, oncekiVal) {
+  const buEl = document.getElementById('fin' + prefix + 'Bu');
+  const oncekiEl = document.getElementById('fin' + prefix + 'Onceki');
+  const chgEl = document.getElementById('fin' + prefix + 'Chg');
+  if (buEl) buEl.textContent = Number.isFinite(buVal) ? fmtMn(buVal) : '';
+  if (oncekiEl) oncekiEl.textContent = Number.isFinite(oncekiVal) ? fmtMn(oncekiVal) : '';
+  if (chgEl) {
+    if (Number.isFinite(buVal) && Number.isFinite(oncekiVal) && oncekiVal !== 0) {
+      const chg = ((buVal - oncekiVal) / Math.abs(oncekiVal)) * 100;
+      chgEl.textContent = (chg >= 0 ? '+' : '') + fmt1(chg) + '%';
+      chgEl.className = 'fin-chg ' + (chg > 0.5 ? 'pos' : chg < -0.5 ? 'neg' : 'notr');
+    } else {
+      chgEl.textContent = '—';
+      chgEl.className = 'fin-chg notr';
+    }
+  }
+}
 const fmtMulti = (v) => (Number.isFinite(v) ? v.toFixed(1) + 'x' : '—');
 
 let state = {
@@ -369,6 +388,20 @@ function valuationSummary(c, derived) {
   else if (counts.pahali > counts.ucuz && counts.pahali >= counts.makul) overall = 'pahali';
 
   return { items, counts, overall, total: items.length };
+}
+
+/* Değerleme Skoru gösterge çubuğu için 0-100 arası konum.
+   Ratio 0.7 (ucuz) -> 0, ratio 1.0 (makul) -> 50, ratio 1.3+ (pahalı) -> 100. */
+function computeValueGaugePct(c, derived) {
+  const ratios = [
+    (Number.isFinite(derived.cFk) && Number.isFinite(c.fkSektor) && c.fkSektor) ? derived.cFk / c.fkSektor : null,
+    (Number.isFinite(derived.cPddd) && Number.isFinite(c.pdddSektor) && c.pdddSektor) ? derived.cPddd / c.pdddSektor : null,
+    (Number.isFinite(derived.cFdFavok) && Number.isFinite(c.fdfavokSektor) && c.fdfavokSektor) ? derived.cFdFavok / c.fdfavokSektor : null
+  ].filter(r => Number.isFinite(r));
+  if (!ratios.length) return null;
+  const avgRatio = ratios.reduce((s, r) => s + r, 0) / ratios.length;
+  const pct = ((avgRatio - 0.7) / (1.3 - 0.7)) * 100;
+  return clamp(pct, 0, 100);
 }
 
 /* ================================================================
@@ -917,6 +950,7 @@ function cacheEls() {
     'sidebarToggle', 'sidebarBackdrop', 'sectionNav',
     'sectorSensitivityPanel', 'sectorSensitivityList',
     'sectorComparePanel', 'sectorCompareHint', 'sectorCompareTable',
+    'valueGaugeMarker',
     'aiFileInput', 'aiExtractBtn', 'aiExtractStatus'
   ].forEach(id => { els[id] = document.getElementById(id); });
 }
@@ -1247,6 +1281,10 @@ function renderDashboard(c) {
         els.valuationDetail.textContent = 'Değerlendirme için en az bir sektör ortalama çarpanı gerekiyor.';
       }
     }
+    if (els.valueGaugeMarker) {
+      const gaugePct = computeValueGaugePct(c, derived);
+      els.valueGaugeMarker.style.left = (gaugePct !== null ? gaugePct : 50) + '%';
+    }
   }
 
   /* Özet Mali Tablolar paneli */
@@ -1258,29 +1296,29 @@ function renderDashboard(c) {
     ].some(v => Number.isFinite(v));
     els.financialsPanel.hidden = !hasAnyFin;
     if (hasAnyFin) {
-      els.finSatisBu.textContent = fmtMn(c.satisBu); els.finSatisOnceki.textContent = fmtMn(c.satisOnceki);
-      els.finBrutKarBu.textContent = fmtMn(c.brutKarBu); els.finBrutKarOnceki.textContent = fmtMn(c.brutKarOnceki);
-      els.finFavokBu.textContent = fmtMn(c.favokBu); els.finFavokOnceki.textContent = fmtMn(c.favokOnceki);
-      els.finFaaliyetKariBu.textContent = fmtMn(c.faaliyetKariBu); els.finFaaliyetKariOnceki.textContent = fmtMn(c.faaliyetKariOnceki);
-      els.finNetKarBu.textContent = fmtMn(c.netkarBu); els.finNetKarOnceki.textContent = fmtMn(c.netkarOnceki);
+      renderFinRow('Satis', c.satisBu, c.satisOnceki);
+      renderFinRow('BrutKar', c.brutKarBu, c.brutKarOnceki);
+      renderFinRow('Favok', c.favokBu, c.favokOnceki);
+      renderFinRow('FaaliyetKari', c.faaliyetKariBu, c.faaliyetKariOnceki);
+      renderFinRow('NetKar', c.netkarBu, c.netkarOnceki);
 
-      els.finDonenVarlikBu.textContent = fmtMn(c.donenVarlikBu); els.finDonenVarlikOnceki.textContent = fmtMn(c.donenVarlikOnceki);
-      els.finDuranVarlikBu.textContent = fmtMn(c.duranVarlikBu); els.finDuranVarlikOnceki.textContent = fmtMn(c.duranVarlikOnceki);
+      renderFinRow('DonenVarlik', c.donenVarlikBu, c.donenVarlikOnceki);
+      renderFinRow('DuranVarlik', c.duranVarlikBu, c.duranVarlikOnceki);
       const toplamVarlikBu = (Number.isFinite(c.donenVarlikBu) || Number.isFinite(c.duranVarlikBu))
         ? (c.donenVarlikBu || 0) + (c.duranVarlikBu || 0) : null;
       const toplamVarlikOnceki = (Number.isFinite(c.donenVarlikOnceki) || Number.isFinite(c.duranVarlikOnceki))
         ? (c.donenVarlikOnceki || 0) + (c.duranVarlikOnceki || 0) : null;
-      els.finToplamVarlikBu.textContent = fmtMn(toplamVarlikBu); els.finToplamVarlikOnceki.textContent = fmtMn(toplamVarlikOnceki);
-      els.finKvBu.textContent = fmtMn(c.kvYukumlulukBu); els.finKvOnceki.textContent = fmtMn(c.kvYukumlulukOnceki);
-      els.finUvBu.textContent = fmtMn(c.uvYukumlulukBu); els.finUvOnceki.textContent = fmtMn(c.uvYukumlulukOnceki);
-      els.finOzkaynakBu.textContent = fmtMn(c.ozkaynakBu); els.finOzkaynakOnceki.textContent = fmtMn(c.ozkaynakOnceki);
+      renderFinRow('ToplamVarlik', toplamVarlikBu, toplamVarlikOnceki);
+      renderFinRow('Kv', c.kvYukumlulukBu, c.kvYukumlulukOnceki);
+      renderFinRow('Uv', c.uvYukumlulukBu, c.uvYukumlulukOnceki);
+      renderFinRow('Ozkaynak', c.ozkaynakBu, c.ozkaynakOnceki);
 
-      els.finIsletmeNakitBu.textContent = fmtMn(c.isletmeNakitBu); els.finIsletmeNakitOnceki.textContent = fmtMn(c.isletmeNakitOnceki);
-      els.finYatirimNakitBu.textContent = fmtMn(c.yatirimNakitBu); els.finYatirimNakitOnceki.textContent = fmtMn(c.yatirimNakitOnceki);
-      els.finFinansmanNakitBu.textContent = fmtMn(c.finansmanNakitBu); els.finFinansmanNakitOnceki.textContent = fmtMn(c.finansmanNakitOnceki);
+      renderFinRow('IsletmeNakit', c.isletmeNakitBu, c.isletmeNakitOnceki);
+      renderFinRow('YatirimNakit', c.yatirimNakitBu, c.yatirimNakitOnceki);
+      renderFinRow('FinansmanNakit', c.finansmanNakitBu, c.finansmanNakitOnceki);
       const fcfBuVal = (Number.isFinite(c.isletmeNakitBu) && Number.isFinite(c.yatirimNakitBu)) ? c.isletmeNakitBu + c.yatirimNakitBu : null;
       const fcfOncekiVal = (Number.isFinite(c.isletmeNakitOnceki) && Number.isFinite(c.yatirimNakitOnceki)) ? c.isletmeNakitOnceki + c.yatirimNakitOnceki : null;
-      els.finFcfBu.textContent = fmtMn(fcfBuVal); els.finFcfOnceki.textContent = fmtMn(fcfOncekiVal);
+      renderFinRow('Fcf', fcfBuVal, fcfOncekiVal);
 
       els.finCariOran.textContent = Number.isFinite(derived.currentRatio) ? fmt1(derived.currentRatio) + 'x' : '—';
       els.finFcfYillik.textContent = Number.isFinite(derived.annualFcf) ? fmtMn(derived.annualFcf) : '—';
@@ -1543,6 +1581,17 @@ function init() {
       els.sectionNav.querySelectorAll('.section-nav-link').forEach((el) => el.classList.remove('is-active'));
       link.classList.add('is-active');
       if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
+    });
+  }
+  /* Dashboard içi sekmeler (Özet / Pozisyon / Mali Tablolar / Sektör / KAP) */
+  const dashboardTabsEl = document.getElementById('dashboardTabs');
+  if (dashboardTabsEl) {
+    dashboardTabsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.tab-nav__btn');
+      if (!btn) return;
+      const tab = btn.dataset.tab;
+      dashboardTabsEl.querySelectorAll('.tab-nav__btn').forEach((b) => b.classList.toggle('is-active', b === btn));
+      document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('is-active', p.dataset.tab === tab));
     });
   }
 }

@@ -553,139 +553,194 @@
         </div>
       </div>
 
-      <div class="panel radar-panel">
-        <h3 class="panel-title">7 Eksen Değerlendirme</h3>
-        <div class="radar-wrap">
-          <canvas id="radarCanvas" width="360" height="360"></canvas>
-          <ul class="score-ledger" id="scoreLedger"></ul>
-        </div>
-      </div>
+      <nav class="tab-nav" id="dashboardTabs">
+        <button type="button" class="tab-nav__btn is-active" data-tab="ozet">Özet</button>
+        <button type="button" class="tab-nav__btn" data-tab="pozisyon">Pozisyon &amp; Değerleme</button>
+        <button type="button" class="tab-nav__btn" data-tab="mali">Mali Tablolar</button>
+        <button type="button" class="tab-nav__btn" data-tab="sektor">Sektör</button>
+        <button type="button" class="tab-nav__btn" data-tab="kap">KAP &amp; Yönetim</button>
+      </nav>
 
-      <div class="panel warnings-panel" id="warningsPanel" hidden>
-        <h3 class="panel-title">⚠ Risk Uyarıları</h3>
-        <ul id="warningsList" class="warnings-list"></ul>
-      </div>
+      <div class="tab-pane is-active" data-tab="ozet">
 
-      <div class="panel position-panel" id="positionPanel" hidden>
-        <h3 class="panel-title">Pozisyon &amp; Değerleme</h3>
-        <div class="position-cards">
-          <div class="position-card">
-            <span class="position-card__label">Maliyet Değeri</span>
-            <span class="position-card__value" id="posCost">—</span>
-          </div>
-          <div class="position-card">
-            <span class="position-card__label">Güncel Değer</span>
-            <span class="position-card__value" id="posValue">—</span>
-          </div>
-          <div class="position-card">
-            <span class="position-card__label">Kâr/Zarar</span>
-            <span class="position-card__value" id="posPnl">—</span>
-          </div>
-          <div class="position-card">
-            <span class="position-card__label">Portföy Ağırlığı</span>
-            <span class="position-card__value" id="posWeight">—</span>
+        <div class="panel radar-panel">
+          <h3 class="panel-title">9 Eksen Değerlendirme</h3>
+          <div class="radar-wrap">
+            <canvas id="radarCanvas" width="360" height="360"></canvas>
+            <ul class="score-ledger" id="scoreLedger"></ul>
           </div>
         </div>
 
-        <div class="multiples-table">
-          <div class="multiples-row multiples-row--head">
-            <span></span><span>Şirket (hesaplanan)</span><span>Sektör Ort.</span>
-          </div>
-          <div class="multiples-row"><span>F/K</span><span id="mulFk">—</span><span id="mulFkSektor">—</span></div>
-          <div class="multiples-row"><span>PD/DD</span><span id="mulPddd">—</span><span id="mulPdddSektor">—</span></div>
-          <div class="multiples-row"><span>FD/FAVÖK</span><span id="mulFdfavok">—</span><span id="mulFdfavokSektor">—</span></div>
+        <div class="panel warnings-panel" id="warningsPanel" hidden>
+          <h3 class="panel-title">⚠ Risk Uyarıları</h3>
+          <ul id="warningsList" class="warnings-list"></ul>
         </div>
 
-        <div id="fairValueBox" class="fair-value-box">
-          <p class="panel-title" style="margin-bottom:8px;border:none;padding:0;">Olası Değer Aralığı (sektör ortalamasına göre)</p>
-          <div class="fair-value-range">
-            <span id="fvLow">—</span>
-            <div class="fair-value-track"><div id="fvMarker" class="fair-value-marker"></div></div>
-            <span id="fvHigh">—</span>
+        <div class="panel report-panel">
+          <h3 class="panel-title">Otomatik Yatırım Raporu</h3>
+          <div id="reportBody" class="report-body"></div>
+        </div>
+
+      </div>
+
+      <div class="tab-pane" data-tab="pozisyon">
+
+        <div class="panel position-panel" id="positionPanel" hidden>
+          <h3 class="panel-title">Pozisyon &amp; Değerleme</h3>
+          <div class="position-cards">
+            <div class="position-card">
+              <span class="position-card__label">Maliyet Değeri</span>
+              <span class="position-card__value" id="posCost">—</span>
+            </div>
+            <div class="position-card">
+              <span class="position-card__label">Güncel Değer</span>
+              <span class="position-card__value" id="posValue">—</span>
+            </div>
+            <div class="position-card">
+              <span class="position-card__label">Kâr/Zarar</span>
+              <span class="position-card__value" id="posPnl">—</span>
+            </div>
+            <div class="position-card">
+              <span class="position-card__label">Portföy Ağırlığı</span>
+              <span class="position-card__value" id="posWeight">—</span>
+            </div>
           </div>
-          <p class="fair-value-note" id="fvNote">Bu bir hedef fiyat değildir — yalnızca girilen sektör çarpanlarına göre olası bir aralıktır. Varsayımları değiştirirsen aralık da değişir.</p>
-          <div id="valuationSummary" class="valuation-summary">
-            <span id="valuationBadge" class="tag notr">—</span>
-            <span id="valuationDetail" class="valuation-detail"></span>
+
+          <div class="multiples-table">
+            <div class="multiples-row multiples-row--head">
+              <span></span><span>Şirket (hesaplanan)</span><span>Sektör Ort.</span>
+            </div>
+            <div class="multiples-row"><span>F/K</span><span id="mulFk">—</span><span id="mulFkSektor">—</span></div>
+            <div class="multiples-row"><span>PD/DD</span><span id="mulPddd">—</span><span id="mulPdddSektor">—</span></div>
+            <div class="multiples-row"><span>FD/FAVÖK</span><span id="mulFdfavok">—</span><span id="mulFdfavokSektor">—</span></div>
+          </div>
+
+          <div id="fairValueBox" class="fair-value-box">
+            <p class="panel-title" style="margin-bottom:8px;border:none;padding:0;">Değerleme Skoru (sektör ortalamasına göre)</p>
+
+            <div class="value-gauge">
+              <div class="value-gauge__track">
+                <div id="valueGaugeMarker" class="value-gauge__marker"></div>
+              </div>
+              <div class="value-gauge__labels">
+                <span>Ucuz</span><span>Makul</span><span>Pahalı</span>
+              </div>
+            </div>
+
+            <div id="valuationSummary" class="valuation-summary">
+              <span id="valuationBadge" class="tag notr">—</span>
+              <span id="valuationDetail" class="valuation-detail"></span>
+            </div>
+
+            <p class="panel-title" style="margin:16px 0 8px;border:none;padding:0;">Olası Değer Aralığı</p>
+            <div class="fair-value-range">
+              <span id="fvLow">—</span>
+              <div class="fair-value-track"><div id="fvMarker" class="fair-value-marker"></div></div>
+              <span id="fvHigh">—</span>
+            </div>
+            <p class="fair-value-note" id="fvNote">Bu bir hedef fiyat değildir — yalnızca girilen sektör çarpanlarına göre olası bir aralıktır. Varsayımları değiştirirsen aralık da değişir.</p>
+          </div>
+
+          <div class="panel monthly-panel" id="monthlyPanel" hidden>
+            <h3 class="panel-title" style="border:none;padding:0;margin-bottom:8px;">Aylık Performans Takibi</h3>
+            <p class="hint">Her ay ilk açılışta güncel fiyat otomatik kaydedilir (maliyet bazlı kâr/zarar %). Gerekirse elle ekleyip düzeltebilirsin.</p>
+            <canvas id="monthlyCanvas" width="560" height="200"></canvas>
+            <div id="monthlyEmptyNote" class="muted-note">Henüz kayıt yok — bu ay siteyi açtığında otomatik eklenecek (güncel fiyat girilmiş olmalı).</div>
+            <div class="monthly-manual-row">
+              <label>Ay
+                <input type="month" id="monthlyManualAy">
+              </label>
+              <label>Fiyat (₺)
+                <input type="number" step="any" id="monthlyManualFiyat">
+              </label>
+              <button type="button" id="monthlyManualSaveBtn" class="btn btn--ghost">Ekle / Güncelle</button>
+            </div>
           </div>
         </div>
 
-        <div class="panel monthly-panel" id="monthlyPanel" hidden>
-          <h3 class="panel-title" style="border:none;padding:0;margin-bottom:8px;">Aylık Performans Takibi</h3>
-          <p class="hint">Her ay ilk açılışta güncel fiyat otomatik kaydedilir (maliyet bazlı kâr/zarar %). Gerekirse elle ekleyip düzeltebilirsin.</p>
-          <canvas id="monthlyCanvas" width="560" height="200"></canvas>
-          <div id="monthlyEmptyNote" class="muted-note">Henüz kayıt yok — bu ay siteyi açtığında otomatik eklenecek (güncel fiyat girilmiş olmalı).</div>
-          <div class="monthly-manual-row">
-            <label>Ay
-              <input type="month" id="monthlyManualAy">
-            </label>
-            <label>Fiyat (₺)
-              <input type="number" step="any" id="monthlyManualFiyat">
-            </label>
-            <button type="button" id="monthlyManualSaveBtn" class="btn btn--ghost">Ekle / Güncelle</button>
+      </div>
+
+      <div class="tab-pane" data-tab="mali">
+
+        <div class="panel financials-panel" id="financialsPanel" hidden>
+          <h3 class="panel-title">Özet Mali Tablolar</h3>
+
+          <div class="fin-summary-grid">
+            <div class="fin-summary-col">
+              <h4 class="fin-summary-col__title">Özet Gelir Tablosu</h4>
+              <div class="fin-summary-row fin-summary-row--head"><span>Kalem</span><span>Bu Çeyrek</span><span>Önceki</span><span>Değişim</span></div>
+              <div class="fin-summary-row"><span>Net Satışlar</span><span id="finSatisBu" class="fin-pill"></span><span id="finSatisOnceki" class="fin-pill fin-pill--muted"></span><span id="finSatisChg" class="fin-chg"></span></div>
+              <div class="fin-summary-row"><span>Brüt Kâr</span><span id="finBrutKarBu" class="fin-pill"></span><span id="finBrutKarOnceki" class="fin-pill fin-pill--muted"></span><span id="finBrutKarChg" class="fin-chg"></span></div>
+              <div class="fin-summary-row"><span>FAVÖK</span><span id="finFavokBu" class="fin-pill"></span><span id="finFavokOnceki" class="fin-pill fin-pill--muted"></span><span id="finFavokChg" class="fin-chg"></span></div>
+              <div class="fin-summary-row"><span>Faaliyet Kârı</span><span id="finFaaliyetKariBu" class="fin-pill"></span><span id="finFaaliyetKariOnceki" class="fin-pill fin-pill--muted"></span><span id="finFaaliyetKariChg" class="fin-chg"></span></div>
+              <div class="fin-summary-row"><span>Net Kâr</span><span id="finNetKarBu" class="fin-pill"></span><span id="finNetKarOnceki" class="fin-pill fin-pill--muted"></span><span id="finNetKarChg" class="fin-chg"></span></div>
+            </div>
+
+            <div class="fin-summary-col">
+              <h4 class="fin-summary-col__title">Özet Bilanço</h4>
+              <div class="fin-summary-row fin-summary-row--head"><span>Kalem</span><span>Bu Çeyrek</span><span>Önceki</span><span>Değişim</span></div>
+              <div class="fin-summary-row"><span>Dönen Varlıklar</span><span id="finDonenVarlikBu" class="fin-pill"></span><span id="finDonenVarlikOnceki" class="fin-pill fin-pill--muted"></span><span id="finDonenVarlikChg" class="fin-chg"></span></div>
+              <div class="fin-summary-row"><span>Duran Varlıklar</span><span id="finDuranVarlikBu" class="fin-pill"></span><span id="finDuranVarlikOnceki" class="fin-pill fin-pill--muted"></span><span id="finDuranVarlikChg" class="fin-chg"></span></div>
+              <div class="fin-summary-row"><span>Toplam Varlıklar</span><span id="finToplamVarlikBu" class="fin-pill"></span><span id="finToplamVarlikOnceki" class="fin-pill fin-pill--muted"></span><span id="finToplamVarlikChg" class="fin-chg"></span></div>
+              <div class="fin-summary-row"><span>KV Yükümlülükler</span><span id="finKvBu" class="fin-pill"></span><span id="finKvOnceki" class="fin-pill fin-pill--muted"></span><span id="finKvChg" class="fin-chg"></span></div>
+              <div class="fin-summary-row"><span>UV Yükümlülükler</span><span id="finUvBu" class="fin-pill"></span><span id="finUvOnceki" class="fin-pill fin-pill--muted"></span><span id="finUvChg" class="fin-chg"></span></div>
+              <div class="fin-summary-row"><span>Özkaynaklar</span><span id="finOzkaynakBu" class="fin-pill"></span><span id="finOzkaynakOnceki" class="fin-pill fin-pill--muted"></span><span id="finOzkaynakChg" class="fin-chg"></span></div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div class="panel sector-compare-panel" id="sectorComparePanel" hidden>
-        <h3 class="panel-title">Sektör İçi Kıyaslama</h3>
-        <p class="hint" id="sectorCompareHint"></p>
-        <div class="sector-compare-table" id="sectorCompareTable"></div>
-      </div>
-
-      <div class="panel financials-panel" id="financialsPanel" hidden>
-        <h3 class="panel-title">Özet Mali Tablolar (Bu Çeyrek)</h3>
-        <div class="multiples-table">
-          <div class="multiples-row multiples-row--head"><span></span><span>Bu Çeyrek</span><span>Önceki Çeyrek</span></div>
-          <div class="multiples-row"><span>Net Satışlar</span><span id="finSatisBu">—</span><span id="finSatisOnceki">—</span></div>
-          <div class="multiples-row"><span>Brüt Kâr</span><span id="finBrutKarBu">—</span><span id="finBrutKarOnceki">—</span></div>
-          <div class="multiples-row"><span>FAVÖK</span><span id="finFavokBu">—</span><span id="finFavokOnceki">—</span></div>
-          <div class="multiples-row"><span>Faaliyet Kârı</span><span id="finFaaliyetKariBu">—</span><span id="finFaaliyetKariOnceki">—</span></div>
-          <div class="multiples-row"><span>Net Kâr</span><span id="finNetKarBu">—</span><span id="finNetKarOnceki">—</span></div>
-          <div class="multiples-row"><span>Dönen Varlıklar</span><span id="finDonenVarlikBu">—</span><span id="finDonenVarlikOnceki">—</span></div>
-          <div class="multiples-row"><span>Duran Varlıklar</span><span id="finDuranVarlikBu">—</span><span id="finDuranVarlikOnceki">—</span></div>
-          <div class="multiples-row"><span>Toplam Varlıklar</span><span id="finToplamVarlikBu">—</span><span id="finToplamVarlikOnceki">—</span></div>
-          <div class="multiples-row"><span>KV Yükümlülükler</span><span id="finKvBu">—</span><span id="finKvOnceki">—</span></div>
-          <div class="multiples-row"><span>UV Yükümlülükler</span><span id="finUvBu">—</span><span id="finUvOnceki">—</span></div>
-          <div class="multiples-row"><span>Özkaynaklar</span><span id="finOzkaynakBu">—</span><span id="finOzkaynakOnceki">—</span></div>
-          <div class="multiples-row"><span>İşletme Nakit Akışı</span><span id="finIsletmeNakitBu">—</span><span id="finIsletmeNakitOnceki">—</span></div>
-          <div class="multiples-row"><span>Yatırım Nakit Akışı</span><span id="finYatirimNakitBu">—</span><span id="finYatirimNakitOnceki">—</span></div>
-          <div class="multiples-row"><span>Finansman Nakit Akışı</span><span id="finFinansmanNakitBu">—</span><span id="finFinansmanNakitOnceki">—</span></div>
-          <div class="multiples-row"><span>Serbest Nakit Akışı</span><span id="finFcfBu">—</span><span id="finFcfOnceki">—</span></div>
-        </div>
-        <div class="position-cards" style="margin-top:12px;">
-          <div class="position-card">
-            <span class="position-card__label">Cari Oran</span>
-            <span class="position-card__value" id="finCariOran">—</span>
+          <div class="fin-summary-col fin-summary-col--full">
+            <h4 class="fin-summary-col__title">Özet Nakit Akım</h4>
+            <div class="fin-summary-row fin-summary-row--head"><span>Kalem</span><span>Bu Çeyrek</span><span>Önceki</span><span>Değişim</span></div>
+            <div class="fin-summary-row"><span>İşletme Nakit Akışı</span><span id="finIsletmeNakitBu" class="fin-pill"></span><span id="finIsletmeNakitOnceki" class="fin-pill fin-pill--muted"></span><span id="finIsletmeNakitChg" class="fin-chg"></span></div>
+            <div class="fin-summary-row"><span>Yatırım Nakit Akışı</span><span id="finYatirimNakitBu" class="fin-pill"></span><span id="finYatirimNakitOnceki" class="fin-pill fin-pill--muted"></span><span id="finYatirimNakitChg" class="fin-chg"></span></div>
+            <div class="fin-summary-row"><span>Finansman Nakit Akışı</span><span id="finFinansmanNakitBu" class="fin-pill"></span><span id="finFinansmanNakitOnceki" class="fin-pill fin-pill--muted"></span><span id="finFinansmanNakitChg" class="fin-chg"></span></div>
+            <div class="fin-summary-row"><span>Serbest Nakit Akışı</span><span id="finFcfBu" class="fin-pill"></span><span id="finFcfOnceki" class="fin-pill fin-pill--muted"></span><span id="finFcfChg" class="fin-chg"></span></div>
           </div>
-          <div class="position-card">
-            <span class="position-card__label">Yıllık Serbest Nakit Akışı</span>
-            <span class="position-card__value" id="finFcfYillik">—</span>
+
+          <div class="position-cards" style="margin-top:12px;">
+            <div class="position-card">
+              <span class="position-card__label">Cari Oran</span>
+              <span class="position-card__value" id="finCariOran">—</span>
+            </div>
+            <div class="position-card">
+              <span class="position-card__label">Yıllık Serbest Nakit Akışı</span>
+              <span class="position-card__value" id="finFcfYillik">—</span>
+            </div>
           </div>
+          <p class="fair-value-note">Cari Oran = Dönen Varlıklar / KV Yükümlülükler. Serbest Nakit Akışı = İşletme + Yatırım Nakit Akışı (çeyreklik değer × 4 ile yıllıklandırılır). Bu tablo bir tavsiye değildir, yalnızca girilen verilerin özetidir.</p>
         </div>
-        <p class="fair-value-note">Cari Oran = Dönen Varlıklar / KV Yükümlülükler. Serbest Nakit Akışı = İşletme + Yatırım Nakit Akışı (çeyreklik değer × 4 ile yıllıklandırılır). Bu tablo bir tavsiye değildir, yalnızca girilen verilerin özetidir.</p>
+
       </div>
 
-      <div class="panel report-panel">
-        <h3 class="panel-title">Otomatik Yatırım Raporu</h3>
-        <div id="reportBody" class="report-body"></div>
+      <div class="tab-pane" data-tab="sektor">
+
+        <div class="panel sector-compare-panel" id="sectorComparePanel" hidden>
+          <h3 class="panel-title">Sektör İçi Kıyaslama</h3>
+          <p class="hint" id="sectorCompareHint"></p>
+          <div class="sector-compare-table" id="sectorCompareTable"></div>
+        </div>
+
       </div>
 
-      <div class="panel kap-panel" id="kapPanel" hidden>
-        <h3 class="panel-title">KAP Tepki Geçmişi</h3>
-        <table class="kap-table">
-          <thead><tr><th>Açıklama Yönü</th><th>Ertesi Gün Tepki</th></tr></thead>
-          <tbody id="kapTableBody"></tbody>
-        </table>
-      </div>
+      <div class="tab-pane" data-tab="kap">
 
-      <div class="panel kap-rapor-panel" id="kapRaporPanel" hidden>
-        <h3 class="panel-title">KAP Faaliyet Raporları</h3>
-        <ul id="kapRaporList" class="kap-rapor-list"></ul>
+        <div class="panel kap-panel" id="kapPanel" hidden>
+          <h3 class="panel-title">KAP Tepki Geçmişi</h3>
+          <table class="kap-table">
+            <thead><tr><th>Açıklama Yönü</th><th>Ertesi Gün Tepki</th></tr></thead>
+            <tbody id="kapTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="panel kap-rapor-panel" id="kapRaporPanel" hidden>
+          <h3 class="panel-title">KAP Faaliyet Raporları</h3>
+          <ul id="kapRaporList" class="kap-rapor-list"></ul>
+        </div>
+
       </div>
 
     </div>
-  </section>
+    </section>
 
 </main>
 
