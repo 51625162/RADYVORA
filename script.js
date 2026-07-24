@@ -47,10 +47,17 @@ let rvCompaniesUnsub = null;
 let rvSettingsUnsub = null;
 
 function rvCompaniesRef() {
-  // Şu an tek kullanıcı modundasın — veriler her zaman bu cihazda saklanır.
+  // Firebase gerçek modda ve giriş yapılmışsa: kullanıcıya özel Firestore koleksiyonu.
+  // Aksi halde (Tek Kullanıcı Modu): bu cihazda yerel depolama.
+  if (!RV_DEMO_MODE && rvDb && rvCurrentUser && rvCurrentUser.uid !== 'tek-kullanici') {
+    return rvDb.collection('users').doc(rvCurrentUser.uid).collection('companies');
+  }
   return rvCreateLocalCollection('radyvora_demo_companies');
 }
 function rvSettingsRef() {
+  if (!RV_DEMO_MODE && rvDb && rvCurrentUser && rvCurrentUser.uid !== 'tek-kullanici') {
+    return rvDb.collection('users').doc(rvCurrentUser.uid).collection('settings').doc('genel');
+  }
   return rvCreateLocalDoc('radyvora_demo_settings');
 }
 
