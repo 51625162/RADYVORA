@@ -951,6 +951,7 @@ function cacheEls() {
     'sectorSensitivityPanel', 'sectorSensitivityList',
     'sectorComparePanel', 'sectorCompareHint', 'sectorCompareTable',
     'valueGaugeMarker',
+    'dashboardTabsNav',
     'aiFileInput', 'aiExtractBtn', 'aiExtractStatus'
   ].forEach(id => { els[id] = document.getElementById(id); });
 }
@@ -1182,11 +1183,13 @@ function renderDashboard(c) {
   if (!c) {
     els.dashboardEmpty.hidden = false;
     els.dashboard.hidden = true;
+    if (els.dashboardTabsNav) els.dashboardTabsNav.hidden = true;
     renderSectorComparison(null);
     return;
   }
   els.dashboardEmpty.hidden = true;
   els.dashboard.hidden = false;
+  if (els.dashboardTabsNav) els.dashboardTabsNav.hidden = false;
   renderSectorComparison(c);
 
   const result = computeScores(c);
@@ -1583,15 +1586,15 @@ function init() {
       if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
     });
   }
-  /* Dashboard içi sekmeler (Özet / Pozisyon / Mali Tablolar / Sektör / KAP) */
-  const dashboardTabsEl = document.getElementById('dashboardTabs');
-  if (dashboardTabsEl) {
-    dashboardTabsEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('.tab-nav__btn');
+  /* Dashboard içi sekmeler (Özet / Pozisyon / Mali Tablolar / Sektör / KAP) — sol kenar çubuğundaki "Analiz Görünümü" menüsünden kontrol edilir */
+  if (els.dashboardTabsNav) {
+    els.dashboardTabsNav.addEventListener('click', (e) => {
+      const btn = e.target.closest('.section-nav-link');
       if (!btn) return;
       const tab = btn.dataset.tab;
-      dashboardTabsEl.querySelectorAll('.tab-nav__btn').forEach((b) => b.classList.toggle('is-active', b === btn));
+      els.dashboardTabsNav.querySelectorAll('.section-nav-link').forEach((b) => b.classList.toggle('is-active', b === btn));
       document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('is-active', p.dataset.tab === tab));
+      if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
     });
   }
 }

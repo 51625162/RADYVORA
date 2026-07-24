@@ -57,6 +57,17 @@
       <li><button type="button" class="section-nav-link" data-target="accordion-9">9 · KAP Faaliyet Raporları</button></li>
     </ul>
   </nav>
+
+  <nav id="dashboardTabsNav" class="section-nav" aria-label="Analiz Görünümü" hidden>
+    <p class="sidebar__subtitle">Analiz Görünümü</p>
+    <ul class="section-nav-list">
+      <li><button type="button" class="section-nav-link is-active" data-tab="ozet">Özet</button></li>
+      <li><button type="button" class="section-nav-link" data-tab="pozisyon">Pozisyon &amp; Değerleme</button></li>
+      <li><button type="button" class="section-nav-link" data-tab="mali">Mali Tablolar</button></li>
+      <li><button type="button" class="section-nav-link" data-tab="sektor">Sektör</button></li>
+      <li><button type="button" class="section-nav-link" data-tab="kap">KAP &amp; Yönetim</button></li>
+    </ul>
+  </nav>
 </aside>
 
 <div id="appMain" class="app-main">
@@ -553,7 +564,7 @@
         </div>
       </div>
 
-      <nav class="tab-nav" id="dashboardTabs">
+      <nav class="tab-nav" id="dashboardTabs" hidden>
         <button type="button" class="tab-nav__btn is-active" data-tab="ozet">Özet</button>
         <button type="button" class="tab-nav__btn" data-tab="pozisyon">Pozisyon &amp; Değerleme</button>
         <button type="button" class="tab-nav__btn" data-tab="mali">Mali Tablolar</button>
