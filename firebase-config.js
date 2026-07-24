@@ -3,7 +3,7 @@
    ============================================================ */
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDwP4X1IC3wKayQpHu2U57c-piPszznjOM",
+  apiKey: "AIzaSyDwP4X1IC3wkayQpHu2U57c-piPszznjOM",
   authDomain: "radyvora-28d2a.firebaseapp.com",
   projectId: "radyvora-28d2a",
   storageBucket: "radyvora-28d2a.firebasestorage.app",
