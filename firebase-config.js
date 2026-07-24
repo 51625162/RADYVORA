@@ -1,39 +1,16 @@
 /* ============================================================
    RADYVORA — Firebase Yapılandırması
-   FIREBASE-KURULUM.md dosyasındaki adım 4'te aldığın config
-   bilgisini aşağıdaki nesnenin İÇİNE yapıştır. Örnek:
-
-   const firebaseConfig = {
-     apiKey: "AIzaSyABCDEF...",
-     authDomain: "radyvora-xxxxx.firebaseapp.com",
-     projectId: "radyvora-xxxxx",
-     storageBucket: "radyvora-xxxxx.appspot.com",
-     messagingSenderId: "123456789012",
-     appId: "1:123456789012:web:abcdef1234567890"
-   };
-
-   Bu değerler gizli değildir, olduğu gibi bırakabilirsin.
    ============================================================ */
 
 const firebaseConfig = {
-  apiKey: "BURAYA_apiKey_YAPISTIR",
-  authDomain: "BURAYA_authDomain_YAPISTIR",
-  projectId: "BURAYA_projectId_YAPISTIR",
-  storageBucket: "BURAYA_storageBucket_YAPISTIR",
-  messagingSenderId: "BURAYA_messagingSenderId_YAPISTIR",
-  appId: "BURAYA_appId_YAPISTIR"
+  apiKey: "AIzaSyDwP4X1IC3wkayQpHu2U57c-piPszznjOM",
+  authDomain: "radyvora-28d2a.firebaseapp.com",
+  projectId: "radyvora-28d2a",
+  storageBucket: "radyvora-28d2a.firebasestorage.app",
+  messagingSenderId: "977410131623",
+  appId: "1:977410131623:web:df227a8356d82c5cf3fd82"
 };
 
-/* ------------------------------------------------------------
-   TEST MODU
-   Gerçek bir Firebase apiKey'i her zaman "AIza" ile başlar ve
-   uzun bir karakter dizisidir. Yukarıdaki alan hâlâ placeholder
-   ise (ya da herhangi bir sebeple bozulmuş/eksikse) bu desene
-   uymaz — bu yüzden "BURAYA_..." metnini birebir aramak yerine
-   gerçek bir anahtara BENZEYİP BENZEMEDİĞİNİ kontrol ediyoruz.
-   Bu, placeholder metninde ufak bir yazım/otomatik düzeltme farkı
-   olsa bile Test Modu'nun doğru çalışmasını garanti eder.
------------------------------------------------------------- */
 function rvLooksLikeRealApiKey(key) {
   return typeof key === 'string' && /^AIza[A-Za-z0-9_-]{20,}$/.test(key.trim());
 }
@@ -48,14 +25,10 @@ if (!RV_DEMO_MODE) {
     rvAuth = firebase.auth();
     rvDb = firebase.firestore();
   } catch (e) {
-    console.error('RADYVORA: Firebase başlatılamadı — firebase-config.js içindeki değerleri kontrol et.', e);
+    console.error('RADYVORA: Firebase başlatılamadı.', e);
   }
 }
 
-/* Firestore'un onSnapshot/doc/set/delete arayüzünü taklit eden,
-   localStorage'a yazan hafif bir mock katman — script.js'in
-   geri kalanı bunun gerçek Firestore mu yoksa yerel mi olduğunu
-   bilmek zorunda kalmaz. */
 function rvCreateLocalCollection(storageKey) {
   function readAll() {
     try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); }
