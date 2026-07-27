@@ -1192,3 +1192,35 @@ input::placeholder, textarea::placeholder{ color: #A6AEC2; }
   padding: 8px 10px;
   margin: -4px 0 4px;
 }
+
+/* ---------- Portföy Sağlık Raporu ---------- */
+.portfolio-health{ margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.ph-weak-axes{
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ph-weak-axes__item{
+  font-size: 13px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--amber);
+  background: var(--surface-2);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.ph-manip-list{ margin-top: 14px; }
+.ph-manip-list__title{
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.ph-manip-row{
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line-soft);
+}

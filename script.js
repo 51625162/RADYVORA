@@ -943,6 +943,7 @@ function cacheEls() {
     'editBenchmarkBtn', 'benchmarkForm', 'saveBenchmarkBtn', 'bm_bist_baslangic', 'bm_bist_guncel',
     'pfTotalCost', 'pfTotalValue', 'pfPnl', 'pfVsBenchmark', 'pfEmptyNote',
     'sectorBalance', 'sectorBars', 'sectorNarrative',
+    'portfolioHealthPanel', 'phAxisCards', 'phWeakAxes', 'phManipList',
     'refreshDovizBtn', 'macroUsd', 'macroEur', 'm_tufe', 'm_faiz', 'm_cds', 'm_pmi',
     'macroUpdated', 'saveMacroBtn', 'macroError',
     'valuationBadge', 'valuationDetail',
@@ -1522,6 +1523,7 @@ function renderPortfolioSummary() {
     els.pfVsBenchmark.textContent = '—';
     els.sectorBalance.hidden = true;
     if (els.pfBestWorstPanel) els.pfBestWorstPanel.hidden = true;
+    if (els.portfolioHealthPanel) els.portfolioHealthPanel.hidden = true;
     return;
   }
   els.pfEmptyNote.hidden = true;
@@ -1594,6 +1596,52 @@ function renderPortfolioSummary() {
     }
   }
   els.sectorNarrative.innerHTML = narrativeParts.map(t => `<p>${escapeHtml(t)}</p>`).join('');
+
+  /* Portföy Sağlık Raporu — ortalama eksen skorları, en zayıf eksenler,
+     yüksek manipülasyon riskli hisseler. Gözlemdir, tavsiye değildir. */
+  if (els.portfolioHealthPanel) {
+    els.portfolioHealthPanel.hidden = false;
+
+    const axisSums = {};
+    const axisCounts = {};
+    RADAR_AXES.forEach(ax => { axisSums[ax.key] = 0; axisCounts[ax.key] = 0; });
+    const manipRisky = [];
+
+    rows.forEach(r => {
+      const { scores } = computeScores(r.c);
+      RADAR_AXES.forEach(ax => {
+        if (Number.isFinite(scores[ax.key])) {
+          axisSums[ax.key] += scores[ax.key];
+          axisCounts[ax.key]++;
+        }
+      });
+      if (Number.isFinite(scores.manipulasyon) && scores.manipulasyon < 35) {
+        manipRisky.push({ c: r.c, score: scores.manipulasyon });
+      }
+    });
+
+    const axisAverages = RADAR_AXES
+      .map(ax => ({ label: ax.label, avg: axisCounts[ax.key] ? axisSums[ax.key] / axisCounts[ax.key] : null }))
+      .filter(a => a.avg !== null);
+
+    els.phAxisCards.innerHTML = axisAverages.map(a => `
+      <div class="position-card">
+        <span class="position-card__label">${escapeHtml(a.label)}</span>
+        <span class="position-card__value">${fmt1(a.avg)}</span>
+      </div>`).join('');
+
+    const weakest = axisAverages.slice().sort((a, b) => a.avg - b.avg).slice(0, 3).filter(a => a.avg < 55);
+    els.phWeakAxes.innerHTML = weakest.length
+      ? `<p class="ph-manip-list__title">En Zayıf Eksenler</p>` + weakest.map(a =>
+          `<div class="ph-weak-axes__item">${escapeHtml(a.label)}: ortalama ${fmt1(a.avg)}/100 — portföyündeki şirketlerin bu eksende görece zayıf olduğunu gösteriyor.</div>`
+        ).join('')
+      : '';
+
+    els.phManipList.innerHTML = manipRisky.length
+      ? `<p class="ph-manip-list__title">Yüksek Manipülasyon Riski Göstergesi Olan Hisseler</p>` +
+        manipRisky.map(m => `<div class="ph-manip-row"><span>${escapeHtml(m.c.name)} (${escapeHtml(m.c.ticker)})</span><span>${fmt1(m.score)}/100</span></div>`).join('')
+      : '';
+  }
 }
 
 function rvSyncSectionNav() {
