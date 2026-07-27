@@ -90,6 +90,37 @@ function rvInitAuth() {
     logoutBtn.textContent = 'Çıkış';
     logoutBtn.addEventListener('click', () => { rvAuth.signOut(); });
   }
+
+  /* Şifremi Unuttum — Firebase'in kendi şifre sıfırlama e-postası */
+  const forgotBtn = document.getElementById('loginForgotBtn');
+  const resetMsgEl = document.getElementById('loginResetMsg');
+  if (forgotBtn) {
+    forgotBtn.addEventListener('click', () => {
+      const emailEl = document.getElementById('loginEmail');
+      const email = emailEl.value.trim();
+      loginErrorEl.hidden = true;
+      resetMsgEl.hidden = true;
+
+      if (!email) {
+        loginErrorEl.textContent = 'Önce e-posta kutusuna adresini yaz, sonra "Şifremi unuttum"a bas.';
+        loginErrorEl.hidden = false;
+        emailEl.focus();
+        return;
+      }
+
+      forgotBtn.disabled = true;
+      rvAuth.sendPasswordResetEmail(email)
+        .then(() => {
+          resetMsgEl.textContent = 'Şifre sıfırlama linki ' + email + ' adresine gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.';
+          resetMsgEl.hidden = false;
+        })
+        .catch((err) => {
+          loginErrorEl.textContent = rvAuthErrorMessage(err.code);
+          loginErrorEl.hidden = false;
+        })
+        .finally(() => { forgotBtn.disabled = false; });
+    });
+  }
 }
 
 function rvAuthErrorMessage(code) {

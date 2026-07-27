@@ -1167,3 +1167,28 @@ input::placeholder, textarea::placeholder{ color: #A6AEC2; }
 .alarm-row__status{ font-weight: 600; }
 .alarm-row__status.triggered{ color: var(--primary-dim); }
 .alarm-row__status.waiting{ color: var(--text-dim); }
+
+/* ---------- Şifremi Unuttum ---------- */
+.login-forgot-link{
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: none;
+  border: none;
+  color: var(--primary-dim);
+  font-size: 12.5px;
+  font-family: var(--font-body);
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 4px;
+  padding: 4px;
+}
+.login-forgot-link:hover{ color: var(--primary); }
+.login-reset-msg{
+  font-size: 12.5px;
+  color: var(--primary-dim);
+  background: var(--primary-soft);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin: -4px 0 4px;
+}
