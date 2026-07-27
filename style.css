@@ -1268,3 +1268,26 @@ input::placeholder, textarea::placeholder{ color: #A6AEC2; }
   font-size: 12.5px;
   color: var(--text);
 }
+
+/* ---------- Fiyat Değişimi (Günlük/Aylık/Yıllık/3 Yıllık) ---------- */
+.price-changes{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.price-change-item{
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.price-change-item__label{ font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.price-change-item__value{ font-family: var(--font-mono); font-weight: 600; font-size: 14px; }
+
+/* ---------- Portföyün Yıllara Göre Değişimi ---------- */
+.yearly-panel{ margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+#yearlyCanvas{ width: 100%; height: 220px; max-width: 640px; }

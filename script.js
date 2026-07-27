@@ -78,6 +78,7 @@ function rvStartListening() {
       rvSyncSectionNav();
       renderPortfolioSummary();
       rvAutoSnapshotMonthly();
+      rvAutoSnapshotDaily();
       checkAlarms();
       if (els.settingsView && !els.settingsView.hidden) { renderAlarmCompanySelect(); renderAlarmList(); }
     },
@@ -473,6 +474,199 @@ function rvAutoSnapshotMonthly() {
     if (last && last.ay === monthKey) return; // bu ay zaten kaydedildi
     const updated = hist.concat([{ ay: monthKey, fiyat: c.guncelFiyat }]);
     ref.doc(c.id).set({ aylikGecmis: updated }, { merge: true }).catch(() => {});
+  });
+}
+
+/* ================================================================
+   GÜNLÜK / AYLIK / YILLIK / 3 YILLIK FİYAT DEĞİŞİMİ
+   Günlük: siteyi açtığın her yeni günde c.gunlukGecmis dizisine
+   otomatik eklenen { tarih: 'YYYY-MM-DD', fiyat } kaydından — bu dizi
+   sürekli birikir, portföyün gün gün trend grafiği de buradan çizilir.
+   Aylık/Yıllık/3 Yıllık: aylikGecmis kayıtlarından (yaklaşık 1/12/36
+   ay öncesine en yakın kayıt bulunur).
+================================================================ */
+function todayKey(d) {
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function rvAutoSnapshotDaily() {
+  const today = todayKey();
+  const ref = rvCompaniesRef();
+  if (!ref) return;
+  state.companies.forEach((c) => {
+    if (!Number.isFinite(c.guncelFiyat)) return;
+    const hist = Array.isArray(c.gunlukGecmis) ? c.gunlukGecmis : [];
+    const last = hist[hist.length - 1];
+    if (last && last.tarih === today) return; // bugün zaten kaydedildi
+    const updated = hist.concat([{ tarih: today, fiyat: c.guncelFiyat }]);
+    ref.doc(c.id).set({ gunlukGecmis: updated }, { merge: true }).catch(() => {});
+  });
+}
+
+function monthsAgoKey(n) {
+  const d = new Date();
+  d.setMonth(d.getMonth() - n);
+  return currentMonthKey(d);
+}
+
+function computePriceChanges(c) {
+  const out = { gunluk: null, aylik: null, yillik: null, ucYillik: null };
+  if (!Number.isFinite(c.guncelFiyat)) return out;
+
+  const daily = Array.isArray(c.gunlukGecmis) ? c.gunlukGecmis.slice().sort((a, b) => a.tarih.localeCompare(b.tarih)) : [];
+  if (daily.length >= 2) {
+    const prev = daily[daily.length - 2];
+    if (Number.isFinite(prev.fiyat) && prev.fiyat !== 0) {
+      out.gunluk = ((c.guncelFiyat / prev.fiyat) - 1) * 100;
+    }
+  }
+
+  const hist = Array.isArray(c.aylikGecmis) ? c.aylikGecmis.slice().sort((a, b) => a.ay.localeCompare(b.ay)) : [];
+  if (hist.length) {
+    const findClosest = (targetKey) => {
+      let best = null;
+      hist.forEach(h => { if (h.ay <= targetKey && (!best || h.ay > best.ay)) best = h; });
+      return best;
+    };
+    const m1 = findClosest(monthsAgoKey(1));
+    if (m1 && Number.isFinite(m1.fiyat) && m1.fiyat !== 0) out.aylik = ((c.guncelFiyat / m1.fiyat) - 1) * 100;
+    const m12 = findClosest(monthsAgoKey(12));
+    if (m12 && Number.isFinite(m12.fiyat) && m12.fiyat !== 0) out.yillik = ((c.guncelFiyat / m12.fiyat) - 1) * 100;
+    const m36 = findClosest(monthsAgoKey(36));
+    if (m36 && Number.isFinite(m36.fiyat) && m36.fiyat !== 0) out.ucYillik = ((c.guncelFiyat / m36.fiyat) - 1) * 100;
+  }
+  return out;
+}
+
+/* Portföyün gün gün toplam değeri — her şirketin gunlukGecmis
+   kayıtları birleştirilip, her tarihte güncel adet × o tarihe kadarki
+   en son bilinen fiyat ile toplam hesaplanır (ileri doğru doldurma). */
+function computePortfolioDaily(rows) {
+  const dateSet = new Set();
+  rows.forEach(r => (r.c.gunlukGecmis || []).forEach(h => dateSet.add(h.tarih)));
+  const dates = Array.from(dateSet).sort();
+  if (dates.length < 2) return [];
+
+  const perCompany = rows
+    .map(r => ({
+      adet: r.c.adet,
+      hist: (r.c.gunlukGecmis || []).slice().sort((a, b) => a.tarih.localeCompare(b.tarih))
+    }))
+    .filter(x => Number.isFinite(x.adet) && x.adet > 0 && x.hist.length);
+
+  return dates.map(date => {
+    let total = 0, any = false;
+    perCompany.forEach(({ adet, hist }) => {
+      let last = null;
+      for (const h of hist) { if (h.tarih <= date) last = h; else break; }
+      if (last) { total += adet * last.fiyat; any = true; }
+    });
+    return any ? { date, value: total } : null;
+  }).filter(Boolean);
+}
+
+function drawDailyChart(canvas, points) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (!points.length) return;
+
+  const padL = 64, padR = 16, padT = 16, padB = 26;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+
+  const vals = points.map(p => p.value);
+  let minV = Math.min(...vals), maxV = Math.max(...vals);
+  if (minV === maxV) { minV *= 0.95; maxV *= 1.05; }
+  const pad = (maxV - minV) * 0.1;
+  minV -= pad; maxV += pad;
+
+  const xFor = (i) => padL + (points.length === 1 ? plotW / 2 : (plotW * i) / (points.length - 1));
+  const yFor = (v) => padT + plotH - ((v - minV) / (maxV - minV)) * plotH;
+
+  ctx.fillStyle = '#67718A';
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(fmtMn(maxV), padL - 6, padT + 8);
+  ctx.fillText(fmtMn(minV), padL - 6, padT + plotH);
+
+  const labelStep = Math.max(1, Math.ceil(points.length / 6));
+  ctx.textAlign = 'center';
+  points.forEach((p, i) => { if (i % labelStep === 0 || i === points.length - 1) ctx.fillText(p.date.slice(5), xFor(i), h - 8); });
+
+  ctx.strokeStyle = '#0E9F6E';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const x = xFor(i), y = yFor(p.value);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+/* Portföyün yıllara göre yaklaşık değeri — güncel adetler sabit
+   kabul edilip, o yılın (aylikGecmis'teki) son kayıtlı fiyatı kullanılır. */
+function computePortfolioYearly(rows) {
+  const yearsSet = new Set();
+  rows.forEach(r => {
+    (r.c.aylikGecmis || []).forEach(h => yearsSet.add(h.ay.slice(0, 4)));
+  });
+  const years = Array.from(yearsSet).sort();
+  return years.map(year => {
+    let total = 0, anyData = false;
+    rows.forEach(r => {
+      const histYear = (r.c.aylikGecmis || []).filter(h => h.ay.startsWith(year)).sort((a, b) => a.ay.localeCompare(b.ay));
+      if (!histYear.length) return;
+      const last = histYear[histYear.length - 1];
+      const adet = r.c.adet;
+      if (Number.isFinite(adet) && adet > 0 && Number.isFinite(last.fiyat)) {
+        total += adet * last.fiyat;
+        anyData = true;
+      }
+    });
+    return anyData ? { year, value: total } : null;
+  }).filter(Boolean);
+}
+
+function drawYearlyChart(canvas, points) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (!points.length) return;
+
+  const padL = 64, padR = 16, padT = 16, padB = 26;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+
+  const vals = points.map(p => p.value);
+  const maxV = Math.max(...vals) * 1.15;
+  const barW = plotW / points.length * 0.6;
+  const gap = plotW / points.length;
+
+  ctx.fillStyle = '#67718A';
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(fmtMn(maxV), padL - 6, padT + 8);
+  ctx.fillText('0', padL - 6, padT + plotH);
+
+  points.forEach((p, i) => {
+    const barH = (p.value / maxV) * plotH;
+    const x = padL + gap * i + (gap - barW) / 2;
+    const y = padT + plotH - barH;
+    ctx.fillStyle = '#0E9F6E';
+    ctx.fillRect(x, y, barW, barH);
+
+    ctx.fillStyle = '#67718A';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.year, x + barW / 2, h - 8);
+
+    if (i > 0) {
+      const prev = points[i - 1].value;
+      const chg = prev !== 0 ? ((p.value / prev) - 1) * 100 : null;
+      if (Number.isFinite(chg)) {
+        ctx.fillStyle = chg >= 0 ? '#0E9F6E' : '#DC4444';
+        ctx.fillText(fmtPct(chg), x + barW / 2, y - 6);
+      }
+    }
   });
 }
 
@@ -989,6 +1183,9 @@ function cacheEls() {
     'macroUpdated', 'saveMacroBtn', 'macroError',
     'valuationBadge', 'valuationDetail',
     'monthlyPanel', 'monthlyCanvas', 'monthlyEmptyNote', 'monthlyManualAy', 'monthlyManualFiyat', 'monthlyManualSaveBtn',
+    'chgGunluk', 'chgAylik', 'chgYillik', 'chg3Yillik',
+    'yearlyPanel', 'yearlyCanvas', 'yearlyEmptyNote',
+    'dailyPanel', 'dailyCanvas', 'dailyEmptyNote',
     'pfBestWorstPanel', 'pfBest', 'pfWorst',
     'financialsPanel',
     'finSatisBu', 'finSatisOnceki', 'finBrutKarBu', 'finBrutKarOnceki', 'finFavokBu', 'finFavokOnceki',
@@ -1019,6 +1216,7 @@ function readForm() {
   const existing = state.companies.find(x => x.id === state.activeId);
   const aylikGecmis = existing && Array.isArray(existing.aylikGecmis) ? existing.aylikGecmis.slice() : [];
   const alarms = existing && Array.isArray(existing.alarms) ? existing.alarms.slice() : [];
+  const gunlukGecmis = existing && Array.isArray(existing.gunlukGecmis) ? existing.gunlukGecmis.slice() : [];
   return {
     id: state.activeId || ('c_' + Date.now()),
     name: val('f_name').trim() || 'İsimsiz Şirket',
@@ -1035,7 +1233,8 @@ function readForm() {
     kap: state.kapDraft.slice(),
     kapRapor: state.kapRaporDraft.slice(),
     aylikGecmis,
-    alarms
+    alarms,
+    gunlukGecmis
   };
 }
 
@@ -1496,6 +1695,17 @@ function renderDashboard(c) {
     } else { els.posPnl.textContent = '—'; els.posPnl.style.color = ''; }
     els.posWeight.textContent = Number.isFinite(derived.agirlik) ? '%' + fmt1(derived.agirlik) : '—';
 
+    const pch = computePriceChanges(c);
+    const setChg = (el, v) => {
+      if (!el) return;
+      el.textContent = Number.isFinite(v) ? fmtPct(v) : '—';
+      el.style.color = Number.isFinite(v) ? (v >= 0 ? 'var(--green)' : 'var(--red)') : '';
+    };
+    setChg(els.chgGunluk, pch.gunluk);
+    setChg(els.chgAylik, pch.aylik);
+    setChg(els.chgYillik, pch.yillik);
+    setChg(els.chg3Yillik, pch.ucYillik);
+
     els.mulFk.textContent = fmtMulti(derived.cFk);
     els.mulFkSektor.textContent = fmtMulti(c.fkSektor);
     els.mulPddd.textContent = fmtMulti(derived.cPddd);
@@ -1646,6 +1856,8 @@ function renderPortfolioSummary() {
     els.sectorBalance.hidden = true;
     if (els.pfBestWorstPanel) els.pfBestWorstPanel.hidden = true;
     if (els.portfolioHealthPanel) els.portfolioHealthPanel.hidden = true;
+    if (els.yearlyPanel) els.yearlyPanel.hidden = true;
+    if (els.dailyPanel) els.dailyPanel.hidden = true;
     return;
   }
   els.pfEmptyNote.hidden = true;
@@ -1718,6 +1930,34 @@ function renderPortfolioSummary() {
     }
   }
   els.sectorNarrative.innerHTML = narrativeParts.map(t => `<p>${escapeHtml(t)}</p>`).join('');
+
+  /* Portföyün Günlük Değişimi */
+  if (els.dailyPanel) {
+    els.dailyPanel.hidden = false;
+    const dailyPoints = computePortfolioDaily(rows);
+    if (dailyPoints.length >= 2) {
+      els.dailyEmptyNote.hidden = true;
+      els.dailyCanvas.hidden = false;
+      drawDailyChart(els.dailyCanvas, dailyPoints);
+    } else {
+      els.dailyEmptyNote.hidden = false;
+      els.dailyCanvas.hidden = true;
+    }
+  }
+
+  /* Portföyün Yıllara Göre Değişimi */
+  if (els.yearlyPanel) {
+    els.yearlyPanel.hidden = false;
+    const yearlyPoints = computePortfolioYearly(rows);
+    if (yearlyPoints.length >= 2) {
+      els.yearlyEmptyNote.hidden = true;
+      els.yearlyCanvas.hidden = false;
+      drawYearlyChart(els.yearlyCanvas, yearlyPoints);
+    } else {
+      els.yearlyEmptyNote.hidden = false;
+      els.yearlyCanvas.hidden = true;
+    }
+  }
 
   /* Portföy Sağlık Raporu — ortalama eksen skorları, en zayıf eksenler,
      yüksek manipülasyon riskli hisseler. Gözlemdir, tavsiye değildir. */

@@ -154,6 +154,20 @@
       <div id="sectorNarrative" class="report-body sector-narrative"></div>
     </div>
 
+    <div id="dailyPanel" class="yearly-panel" hidden>
+      <h3 class="panel-title">Portföyün Günlük Değişimi</h3>
+      <p class="hint">Güncel hisse adetlerin sabit kabul edilip, her gün için o güne kadar bilinen en son fiyatlarla toplam değer. Zamanla, siteyi her açtığında biriken kayıtlarla oluşur.</p>
+      <canvas id="dailyCanvas" width="640" height="220"></canvas>
+      <p id="dailyEmptyNote" class="muted-note">Henüz gün gün kıyaslama için yeterli veri yok — birkaç gün siteyi açıp güncel fiyat girdikçe burada birikmeye başlar.</p>
+    </div>
+
+    <div id="yearlyPanel" class="yearly-panel" hidden>
+      <h3 class="panel-title">Portföyün Yıllara Göre Değişimi</h3>
+      <p class="hint">Güncel hisse adetlerin sabit kabul edilip, o yılın kayıtlı fiyatlarına göre yaklaşık portföy değeri. Aylık Performans Takibi'nde biriken kayıtlara dayanır — yeterli geçmiş veri birikince görünür.</p>
+      <canvas id="yearlyCanvas" width="640" height="220"></canvas>
+      <p id="yearlyEmptyNote" class="muted-note">Henüz yıllar arası kıyaslama için yeterli geçmiş veri yok.</p>
+    </div>
+
     <div id="portfolioHealthPanel" class="portfolio-health" hidden>
       <h3 class="panel-title">Portföy Sağlık Raporu</h3>
       <p class="hint">Portföyündeki şirketlerin Dr. Uzman skorlarına göre genel görünüm. Bu bir al/sat tavsiyesi değildir, yalnızca gözlemdir.</p>
@@ -462,6 +476,14 @@
               <span class="position-card__value" id="posWeight">—</span>
             </div>
           </div>
+
+          <div class="price-changes">
+            <div class="price-change-item"><span class="price-change-item__label">Günlük</span><span class="price-change-item__value" id="chgGunluk">—</span></div>
+            <div class="price-change-item"><span class="price-change-item__label">Aylık</span><span class="price-change-item__value" id="chgAylik">—</span></div>
+            <div class="price-change-item"><span class="price-change-item__label">Yıllık</span><span class="price-change-item__value" id="chgYillik">—</span></div>
+            <div class="price-change-item"><span class="price-change-item__label">3 Yıllık</span><span class="price-change-item__value" id="chg3Yillik">—</span></div>
+          </div>
+          <p class="hint">Günlük değişim, siteyi son iki farklı günde açtığında kaydedilen fiyatlara göre hesaplanır. Yıllık/3 yıllık değişim, Aylık Performans Takibi'nde birikmiş kayıtlara göre hesaplanır — yeterli geçmiş veri birikince görünür.</p>
 
           <div class="multiples-table">
             <div class="multiples-row multiples-row--head">
