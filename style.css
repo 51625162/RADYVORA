@@ -1224,3 +1224,47 @@ input::placeholder, textarea::placeholder{ color: #A6AEC2; }
   padding: 6px 0;
   border-bottom: 1px solid var(--line-soft);
 }
+
+/* ---------- Mali Dönem Verileri (sınırsız dönem yönetimi) ---------- */
+.financials-entries{ margin-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+.financials-entry{
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  padding: 12px 14px;
+}
+.financials-entry__head{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.financials-entry__head input[type="text"]{
+  flex: 1;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 7px 9px;
+  color: var(--text);
+}
+.financials-entry__grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+.financials-entry__grid label{
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+.financials-entry__grid input{
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text);
+}

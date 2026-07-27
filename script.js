@@ -35,6 +35,7 @@ let state = {
   activeId: null,
   kapDraft: [],       // KAP etki kayıtları taslağı (form düzenlenirken)
   kapRaporDraft: [],  // KAP faaliyet raporu linkleri taslağı
+  financialsDraft: [],  // Mali Dönem Verileri (sınırsız dönem) taslağı
   benchmark: {}       // { bist100Baslangic, bist100Guncel }
 };
 
@@ -166,6 +167,38 @@ async function rvFetchDovizKurlari() {
   }
 }
 
+/* TCMB EVDS üzerinden TÜFE Yıllık % ve Fonlama Maliyetini çeker.
+   Ayrı bir EVDS API anahtarı Worker'a eklenmiş olmalı (bkz. EVDS-KURULUM.md). */
+async function rvFetchEvdsMacro() {
+  if (!els.evdsStatus) return;
+  if (typeof rvWorkerConfigured !== 'function' || !rvWorkerConfigured()) {
+    els.evdsStatus.textContent = 'Önce ai-config.js dosyasına Cloudflare Worker adresini eklemelisin (bkz. AI-KURULUM.md).';
+    return;
+  }
+  els.evdsStatus.textContent = 'TCMB EVDS\'den çekiliyor…';
+  if (els.fetchEvdsBtn) els.fetchEvdsBtn.disabled = true;
+
+  try {
+    const res = await fetch(RV_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_macro' })
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) {
+      els.evdsStatus.textContent = 'Hata: ' + (json.error || 'bilinmeyen bir sorun oluştu.');
+      return;
+    }
+    if (Number.isFinite(json.tufe_yillik) && els.m_tufe) els.m_tufe.value = fmt1(json.tufe_yillik);
+    if (Number.isFinite(json.faiz) && els.m_faiz) els.m_faiz.value = fmt1(json.faiz);
+    els.evdsStatus.textContent = 'Çekildi' + (json.asOf ? ' (TCMB verisi: ' + json.asOf + ')' : '') + ' — kaydetmek için "Manuel Verileri Kaydet"e bas.';
+  } catch (e) {
+    els.evdsStatus.textContent = 'Hata: ' + e.message;
+  } finally {
+    if (els.fetchEvdsBtn) els.fetchEvdsBtn.disabled = false;
+  }
+}
+
 function handleSaveMacro() {
   const ref = rvSettingsRef();
   if (!ref) return;
@@ -290,31 +323,35 @@ function rvExcelToText(file) {
 }
 
 function rvFillFormFromAi(json) {
-  const setVal = (id, v) => {
-    const el = document.getElementById(id);
-    if (el && Number.isFinite(v)) el.value = v;
+  const mapToEntry = (period) => {
+    if (!period) return null;
+    return {
+      period: period.period_label || '',
+      satis: period.satis, brutKar: period.brut_kar, favok: period.favok,
+      faaliyetKari: period.faaliyet_kari, netkar: period.net_kar,
+      donenVarlik: period.donen_varlik, duranVarlik: period.duran_varlik,
+      kvYukumluluk: period.kv_yukumluluk, uvYukumluluk: period.uv_yukumluluk,
+      netborc: period.net_borc, ozkaynak: period.ozkaynaklar,
+      isletmeNakit: period.isletme_nakit, yatirimNakit: period.yatirim_nakit,
+      finansmanNakit: period.finansman_nakit, donemSonuNakit: period.donem_sonu_nakit
+    };
   };
-  const mapPeriod = (period, suffix) => {
-    if (!period) return;
-    setVal('f_satis_' + suffix, period.satis);
-    setVal('f_brut_kar_' + suffix, period.brut_kar);
-    setVal('f_favok_' + suffix, period.favok);
-    setVal('f_faaliyet_kari_' + suffix, period.faaliyet_kari);
-    setVal('f_netkar_' + suffix, period.net_kar);
-    setVal('f_donen_varlik_' + suffix, period.donen_varlik);
-    setVal('f_duran_varlik_' + suffix, period.duran_varlik);
-    setVal('f_kv_yukumluluk_' + suffix, period.kv_yukumluluk);
-    setVal('f_uv_yukumluluk_' + suffix, period.uv_yukumluluk);
-    setVal('f_netborc_' + suffix, period.net_borc);
-    setVal('f_ozkaynak_' + suffix, period.ozkaynaklar);
-    setVal('f_isletme_nakit_' + suffix, period.isletme_nakit);
-    setVal('f_yatirim_nakit_' + suffix, period.yatirim_nakit);
-    setVal('f_finansman_nakit_' + suffix, period.finansman_nakit);
-  };
-  mapPeriod(json.bu_donem, 'bu');
-  mapPeriod(json.onceki_donem, 'onceki');
+
+  const periodsRaw = Array.isArray(json.periods) ? json.periods : [];
+  const newEntries = periodsRaw.map(mapToEntry).filter(Boolean);
+  if (!newEntries.length) return;
+
+  newEntries.forEach((entry) => {
+    const existingIdx = state.financialsDraft.findIndex(f => f.period && entry.period && f.period === entry.period);
+    if (existingIdx >= 0) state.financialsDraft[existingIdx] = entry;
+    else state.financialsDraft.push(entry);
+  });
+
+  renderFinancialsEntries();
+  const labels = newEntries.map(e => e.period).filter(Boolean);
+  renderCompareSelectors(labels[0], labels[1]);
+
   const acc1 = document.getElementById('accordion-1'); if (acc1) acc1.open = true;
-  const acc2 = document.getElementById('accordion-2'); if (acc2) acc2.open = true;
 }
 
 async function handleAiExtract() {
@@ -628,7 +665,9 @@ function renderSectorSensitivity() {
 /* ================================================================
    SKORLAMA MOTORU
 ================================================================ */
-function computeScores(c) {
+function computeScores(cRaw) {
+  const finNorm = normalizeFinancials(cRaw);
+  const c = { ...cRaw, ...finNorm };
   const scores = {};
   const notes = { warnings: [] };
 
@@ -769,7 +808,7 @@ function computeScores(c) {
     scores, notes,
     derived: {
       favokMarjiBu, roe, netBorcFavok, profitVolatility, cFk, cPddd, cFdFavok, agirlik,
-      currentRatio, annualFcf, fcfMargin, fcfQuality
+      currentRatio, annualFcf, fcfMargin, fcfQuality, financialsNorm: finNorm
     }
   };
 }
@@ -940,11 +979,13 @@ function cacheEls() {
     'mulFk', 'mulFkSektor', 'mulPddd', 'mulPdddSektor', 'mulFdfavok', 'mulFdfavokSektor',
     'fvLow', 'fvHigh', 'fvMarker', 'fvNote',
     'kapRaporPanel', 'kapRaporList', 'kapRaporEntries', 'addKapRaporBtn',
+    'addFinancialsBtn', 'financialsEntries', 'financialsEmptyNote', 'f_compare_a', 'f_compare_b',
     'editBenchmarkBtn', 'benchmarkForm', 'saveBenchmarkBtn', 'bm_bist_baslangic', 'bm_bist_guncel',
     'pfTotalCost', 'pfTotalValue', 'pfPnl', 'pfVsBenchmark', 'pfEmptyNote',
     'sectorBalance', 'sectorBars', 'sectorNarrative',
     'portfolioHealthPanel', 'phAxisCards', 'phWeakAxes', 'phManipList',
     'refreshDovizBtn', 'macroUsd', 'macroEur', 'm_tufe', 'm_faiz', 'm_cds', 'm_pmi',
+    'fetchEvdsBtn', 'evdsStatus',
     'macroUpdated', 'saveMacroBtn', 'macroError',
     'valuationBadge', 'valuationDetail',
     'monthlyPanel', 'monthlyCanvas', 'monthlyEmptyNote', 'monthlyManualAy', 'monthlyManualFiyat', 'monthlyManualSaveBtn',
@@ -957,6 +998,7 @@ function cacheEls() {
     'finOzkaynakBu', 'finOzkaynakOnceki', 'finIsletmeNakitBu', 'finIsletmeNakitOnceki',
     'finYatirimNakitBu', 'finYatirimNakitOnceki', 'finFinansmanNakitBu', 'finFinansmanNakitOnceki',
     'finFcfBu', 'finFcfOnceki', 'finCariOran', 'finFcfYillik',
+    'finPeriodLabelA', 'finPeriodLabelB',
     'sidebarToggle', 'sidebarBackdrop', 'sectionNav',
     'sectorSensitivityPanel', 'sectorSensitivityList',
     'sectorComparePanel', 'sectorCompareHint', 'sectorCompareTable',
@@ -982,20 +1024,8 @@ function readForm() {
     name: val('f_name').trim() || 'İsimsiz Şirket',
     ticker: val('f_ticker').trim().toUpperCase() || '—',
     sector: val('f_sector').trim(),
-    satisBu: num('f_satis_bu'), satisOnceki: num('f_satis_onceki'),
-    brutKarBu: num('f_brut_kar_bu'), brutKarOnceki: num('f_brut_kar_onceki'),
-    favokBu: num('f_favok_bu'), favokOnceki: num('f_favok_onceki'),
-    faaliyetKariBu: num('f_faaliyet_kari_bu'), faaliyetKariOnceki: num('f_faaliyet_kari_onceki'),
-    netkarBu: num('f_netkar_bu'), netkarOnceki: num('f_netkar_onceki'),
-    donenVarlikBu: num('f_donen_varlik_bu'), donenVarlikOnceki: num('f_donen_varlik_onceki'),
-    duranVarlikBu: num('f_duran_varlik_bu'), duranVarlikOnceki: num('f_duran_varlik_onceki'),
-    kvYukumlulukBu: num('f_kv_yukumluluk_bu'), kvYukumlulukOnceki: num('f_kv_yukumluluk_onceki'),
-    uvYukumlulukBu: num('f_uv_yukumluluk_bu'), uvYukumlulukOnceki: num('f_uv_yukumluluk_onceki'),
-    netborcBu: num('f_netborc_bu'), netborcOnceki: num('f_netborc_onceki'),
-    ozkaynakBu: num('f_ozkaynak_bu'), ozkaynakOnceki: num('f_ozkaynak_onceki'),
-    isletmeNakitBu: num('f_isletme_nakit_bu'), isletmeNakitOnceki: num('f_isletme_nakit_onceki'),
-    yatirimNakitBu: num('f_yatirim_nakit_bu'), yatirimNakitOnceki: num('f_yatirim_nakit_onceki'),
-    finansmanNakitBu: num('f_finansman_nakit_bu'), finansmanNakitOnceki: num('f_finansman_nakit_onceki'),
+    financials: state.financialsDraft.slice(),
+    compareA: val('f_compare_a'), compareB: val('f_compare_b'),
     fkSektor: num('f_fk_sektor'), pdddSektor: num('f_pddd_sektor'), fdfavokSektor: num('f_fdfavok_sektor'),
     sozVerilen: num('f_soz_verilen'), sozGerceklesen: num('f_soz_gerceklesen'),
     guncelFiyat: num('f_guncel_fiyat'), fiyatTarihi: val('f_fiyat_tarihi') || null,
@@ -1012,20 +1042,9 @@ function readForm() {
 function fillForm(c) {
   const set = (id, v) => { document.getElementById(id).value = (v === null || v === undefined) ? '' : v; };
   set('f_name', c.name); set('f_ticker', c.ticker); set('f_sector', c.sector);
-  set('f_satis_bu', c.satisBu); set('f_satis_onceki', c.satisOnceki);
-  set('f_brut_kar_bu', c.brutKarBu); set('f_brut_kar_onceki', c.brutKarOnceki);
-  set('f_favok_bu', c.favokBu); set('f_favok_onceki', c.favokOnceki);
-  set('f_faaliyet_kari_bu', c.faaliyetKariBu); set('f_faaliyet_kari_onceki', c.faaliyetKariOnceki);
-  set('f_netkar_bu', c.netkarBu); set('f_netkar_onceki', c.netkarOnceki);
-  set('f_donen_varlik_bu', c.donenVarlikBu); set('f_donen_varlik_onceki', c.donenVarlikOnceki);
-  set('f_duran_varlik_bu', c.duranVarlikBu); set('f_duran_varlik_onceki', c.duranVarlikOnceki);
-  set('f_kv_yukumluluk_bu', c.kvYukumlulukBu); set('f_kv_yukumluluk_onceki', c.kvYukumlulukOnceki);
-  set('f_uv_yukumluluk_bu', c.uvYukumlulukBu); set('f_uv_yukumluluk_onceki', c.uvYukumlulukOnceki);
-  set('f_netborc_bu', c.netborcBu); set('f_netborc_onceki', c.netborcOnceki);
-  set('f_ozkaynak_bu', c.ozkaynakBu); set('f_ozkaynak_onceki', c.ozkaynakOnceki);
-  set('f_isletme_nakit_bu', c.isletmeNakitBu); set('f_isletme_nakit_onceki', c.isletmeNakitOnceki);
-  set('f_yatirim_nakit_bu', c.yatirimNakitBu); set('f_yatirim_nakit_onceki', c.yatirimNakitOnceki);
-  set('f_finansman_nakit_bu', c.finansmanNakitBu); set('f_finansman_nakit_onceki', c.finansmanNakitOnceki);
+  state.financialsDraft = (Array.isArray(c.financials) ? c.financials : []).map(f => ({ ...f }));
+  renderFinancialsEntries();
+  renderCompareSelectors(c.compareA, c.compareB);
   set('f_fk_sektor', c.fkSektor); set('f_pddd_sektor', c.pdddSektor); set('f_fdfavok_sektor', c.fdfavokSektor);
   set('f_soz_verilen', c.sozVerilen); set('f_soz_gerceklesen', c.sozGerceklesen);
   set('f_guncel_fiyat', c.guncelFiyat); set('f_fiyat_tarihi', c.fiyatTarihi);
@@ -1044,8 +1063,11 @@ function clearForm() {
   els.sektorGorunumOut.textContent = '5';
   state.kapDraft = [];
   state.kapRaporDraft = [];
+  state.financialsDraft = [];
   renderKapEntries();
   renderKapRaporEntries();
+  renderFinancialsEntries();
+  renderCompareSelectors();
 }
 
 /* KAP etki kayıtları */
@@ -1098,6 +1120,85 @@ function renderKapRaporEntries() {
   });
 }
 
+/* ================================================================
+   MALİ DÖNEM VERİLERİ — sınırsız dönem (ör. 2026/Q2, 2025/Q2, ...)
+   Her dönem 16 kalem içerir. Kullanıcı hangi iki dönemi karşılaştırıp
+   Dr. Uzman'ın skorlamasında kullanacağını seçer (compareA/compareB).
+================================================================ */
+const FINANCIALS_FIELDS = [
+  { key: 'satis', label: 'Net Satışlar' },
+  { key: 'brutKar', label: 'Brüt Kâr' },
+  { key: 'favok', label: 'FAVÖK' },
+  { key: 'faaliyetKari', label: 'Faaliyet Kârı / EBİT' },
+  { key: 'netkar', label: 'Net Kâr' },
+  { key: 'donenVarlik', label: 'Dönen Varlıklar' },
+  { key: 'duranVarlik', label: 'Duran Varlıklar' },
+  { key: 'kvYukumluluk', label: 'KV Yükümlülükler' },
+  { key: 'uvYukumluluk', label: 'UV Yükümlülükler' },
+  { key: 'netborc', label: 'Net Borç' },
+  { key: 'ozkaynak', label: 'Özkaynaklar' },
+  { key: 'isletmeNakit', label: 'İşletme Nakit Akışı' },
+  { key: 'yatirimNakit', label: 'Yatırım Nakit Akışı' },
+  { key: 'finansmanNakit', label: 'Finansman Nakit Akışı' },
+  { key: 'donemSonuNakit', label: 'Dönem Sonu Nakit' }
+];
+
+function renderFinancialsEntries() {
+  if (!els.financialsEntries) return;
+  els.financialsEntries.innerHTML = '';
+  els.financialsEmptyNote.hidden = state.financialsDraft.length > 0;
+
+  state.financialsDraft.forEach((row, i) => {
+    const div = document.createElement('div');
+    div.className = 'financials-entry';
+    div.innerHTML = `
+      <div class="financials-entry__head">
+        <input type="text" placeholder="Dönem (örn. 2026/Q2)" value="${escapeAttr(row.period || '')}" data-i="${i}" data-f="period">
+        <button type="button" class="kap-remove" data-i="${i}" data-kind="financials" title="Dönemi sil">✕</button>
+      </div>
+      <div class="financials-entry__grid">
+        ${FINANCIALS_FIELDS.map(f => `
+          <label>${escapeHtml(f.label)} (mn ₺)
+            <input type="number" step="any" value="${row[f.key] ?? ''}" data-i="${i}" data-f="${f.key}">
+          </label>
+        `).join('')}
+      </div>`;
+    els.financialsEntries.appendChild(div);
+  });
+}
+
+function renderCompareSelectors(preferA, preferB) {
+  if (!els.f_compare_a || !els.f_compare_b) return;
+  const options = state.financialsDraft
+    .map((row, i) => ({ value: row.period || ('#' + i), label: row.period || '(etiketsiz dönem ' + (i + 1) + ')' }))
+    .filter(o => o.value);
+  const optionsHtml = '<option value="">— Seç —</option>' + options.map(o => `<option value="${escapeAttr(o.value)}">${escapeHtml(o.label)}</option>`).join('');
+  els.f_compare_a.innerHTML = optionsHtml;
+  els.f_compare_b.innerHTML = optionsHtml;
+
+  const a = preferA || (options[0] && options[0].value) || '';
+  const b = preferB || (options[1] && options[1].value) || '';
+  els.f_compare_a.value = a;
+  els.f_compare_b.value = b;
+}
+
+/* c.financials (dizi) + c.compareA/c.compareB'den, eski Bu/Önceki alan
+   isimlerine (satisBu, satisOnceki vb.) dönüştürür — böylece Dr.
+   Uzman'ın skorlama formülleri hiç değişmeden çalışmaya devam eder. */
+function normalizeFinancials(c) {
+  const list = Array.isArray(c.financials) ? c.financials : [];
+  const entryA = list.find(f => f.period === c.compareA) || list[0] || {};
+  const entryB = list.find(f => f.period === c.compareB) || list[1] || {};
+  const out = {};
+  FINANCIALS_FIELDS.forEach(f => {
+    out[f.key + 'Bu'] = Number.isFinite(entryA[f.key]) ? entryA[f.key] : null;
+    out[f.key + 'Onceki'] = Number.isFinite(entryB[f.key]) ? entryB[f.key] : null;
+  });
+  out.compareALabel = entryA.period || null;
+  out.compareBLabel = entryB.period || null;
+  return out;
+}
+
 function escapeAttr(s) { return String(s).replace(/"/g, '&quot;'); }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -1120,6 +1221,18 @@ function escapeHtml(s) {
         state.kapRaporDraft[i][f] = t.value;
       }
     }
+    if (t.closest && t.closest('#financialsEntries')) {
+      const i = parseInt(t.dataset.i, 10);
+      const f = t.dataset.f;
+      if (!Number.isNaN(i) && state.financialsDraft[i]) {
+        if (f === 'period') {
+          state.financialsDraft[i][f] = t.value;
+          renderCompareSelectors(els.f_compare_a.value, els.f_compare_b.value);
+        } else {
+          state.financialsDraft[i][f] = t.value === '' ? null : parseFloat(t.value);
+        }
+      }
+    }
     if (t.id === 'f_sektor_gorunum') els.sektorGorunumOut.textContent = t.value;
   });
 
@@ -1128,6 +1241,11 @@ function escapeHtml(s) {
     if (rm) {
       const i = parseInt(rm.dataset.i, 10);
       if (rm.dataset.kind === 'kap') { state.kapDraft.splice(i, 1); renderKapEntries(); }
+      else if (rm.dataset.kind === 'financials') {
+        state.financialsDraft.splice(i, 1);
+        renderFinancialsEntries();
+        renderCompareSelectors(els.f_compare_a.value, els.f_compare_b.value);
+      }
       else { state.kapRaporDraft.splice(i, 1); renderKapRaporEntries(); }
     }
   });
@@ -1385,7 +1503,7 @@ function renderDashboard(c) {
     els.mulFdfavok.textContent = fmtMulti(derived.cFdFavok);
     els.mulFdfavokSektor.textContent = fmtMulti(c.fdfavokSektor);
 
-    const fv = fairValueRange(c);
+    const fv = fairValueRange({ ...c, ...derived.financialsNorm });
     if (fv) {
       els.fvLow.textContent = fv.low.toFixed(2) + ' ₺';
       els.fvHigh.textContent = fv.high.toFixed(2) + ' ₺';
@@ -1431,35 +1549,39 @@ function renderDashboard(c) {
 
   /* Özet Mali Tablolar paneli */
   if (els.financialsPanel) {
+    const fn = derived.financialsNorm || {};
     const hasAnyFin = [
-      c.satisBu, c.brutKarBu, c.favokBu, c.faaliyetKariBu, c.netkarBu,
-      c.donenVarlikBu, c.duranVarlikBu, c.kvYukumlulukBu, c.uvYukumlulukBu, c.ozkaynakBu,
-      c.isletmeNakitBu, c.yatirimNakitBu, c.finansmanNakitBu
+      fn.satisBu, fn.brutKarBu, fn.favokBu, fn.faaliyetKariBu, fn.netkarBu,
+      fn.donenVarlikBu, fn.duranVarlikBu, fn.kvYukumlulukBu, fn.uvYukumlulukBu, fn.ozkaynakBu,
+      fn.isletmeNakitBu, fn.yatirimNakitBu, fn.finansmanNakitBu
     ].some(v => Number.isFinite(v));
     els.financialsPanel.hidden = !hasAnyFin;
     if (hasAnyFin) {
-      renderFinRow('Satis', c.satisBu, c.satisOnceki);
-      renderFinRow('BrutKar', c.brutKarBu, c.brutKarOnceki);
-      renderFinRow('Favok', c.favokBu, c.favokOnceki);
-      renderFinRow('FaaliyetKari', c.faaliyetKariBu, c.faaliyetKariOnceki);
-      renderFinRow('NetKar', c.netkarBu, c.netkarOnceki);
+      if (els.finPeriodLabelA) els.finPeriodLabelA.textContent = fn.compareALabel || 'Dönem A';
+      if (els.finPeriodLabelB) els.finPeriodLabelB.textContent = fn.compareBLabel || 'Dönem B';
+      renderFinRow('Satis', fn.satisBu, fn.satisOnceki);
+      renderFinRow('BrutKar', fn.brutKarBu, fn.brutKarOnceki);
+      renderFinRow('Favok', fn.favokBu, fn.favokOnceki);
+      renderFinRow('FaaliyetKari', fn.faaliyetKariBu, fn.faaliyetKariOnceki);
+      renderFinRow('NetKar', fn.netkarBu, fn.netkarOnceki);
 
-      renderFinRow('DonenVarlik', c.donenVarlikBu, c.donenVarlikOnceki);
-      renderFinRow('DuranVarlik', c.duranVarlikBu, c.duranVarlikOnceki);
-      const toplamVarlikBu = (Number.isFinite(c.donenVarlikBu) || Number.isFinite(c.duranVarlikBu))
-        ? (c.donenVarlikBu || 0) + (c.duranVarlikBu || 0) : null;
-      const toplamVarlikOnceki = (Number.isFinite(c.donenVarlikOnceki) || Number.isFinite(c.duranVarlikOnceki))
-        ? (c.donenVarlikOnceki || 0) + (c.duranVarlikOnceki || 0) : null;
+      renderFinRow('DonenVarlik', fn.donenVarlikBu, fn.donenVarlikOnceki);
+      renderFinRow('DuranVarlik', fn.duranVarlikBu, fn.duranVarlikOnceki);
+      const toplamVarlikBu = (Number.isFinite(fn.donenVarlikBu) || Number.isFinite(fn.duranVarlikBu))
+        ? (fn.donenVarlikBu || 0) + (fn.duranVarlikBu || 0) : null;
+      const toplamVarlikOnceki = (Number.isFinite(fn.donenVarlikOnceki) || Number.isFinite(fn.duranVarlikOnceki))
+        ? (fn.donenVarlikOnceki || 0) + (fn.duranVarlikOnceki || 0) : null;
       renderFinRow('ToplamVarlik', toplamVarlikBu, toplamVarlikOnceki);
-      renderFinRow('Kv', c.kvYukumlulukBu, c.kvYukumlulukOnceki);
-      renderFinRow('Uv', c.uvYukumlulukBu, c.uvYukumlulukOnceki);
-      renderFinRow('Ozkaynak', c.ozkaynakBu, c.ozkaynakOnceki);
+      renderFinRow('Kv', fn.kvYukumlulukBu, fn.kvYukumlulukOnceki);
+      renderFinRow('Uv', fn.uvYukumlulukBu, fn.uvYukumlulukOnceki);
+      renderFinRow('Ozkaynak', fn.ozkaynakBu, fn.ozkaynakOnceki);
 
-      renderFinRow('IsletmeNakit', c.isletmeNakitBu, c.isletmeNakitOnceki);
-      renderFinRow('YatirimNakit', c.yatirimNakitBu, c.yatirimNakitOnceki);
-      renderFinRow('FinansmanNakit', c.finansmanNakitBu, c.finansmanNakitOnceki);
-      const fcfBuVal = (Number.isFinite(c.isletmeNakitBu) && Number.isFinite(c.yatirimNakitBu)) ? c.isletmeNakitBu + c.yatirimNakitBu : null;
-      const fcfOncekiVal = (Number.isFinite(c.isletmeNakitOnceki) && Number.isFinite(c.yatirimNakitOnceki)) ? c.isletmeNakitOnceki + c.yatirimNakitOnceki : null;
+      renderFinRow('IsletmeNakit', fn.isletmeNakitBu, fn.isletmeNakitOnceki);
+      renderFinRow('YatirimNakit', fn.yatirimNakitBu, fn.yatirimNakitOnceki);
+      renderFinRow('FinansmanNakit', fn.finansmanNakitBu, fn.finansmanNakitOnceki);
+      renderFinRow('DonemSonuNakit', fn.donemSonuNakitBu, fn.donemSonuNakitOnceki);
+      const fcfBuVal = (Number.isFinite(fn.isletmeNakitBu) && Number.isFinite(fn.yatirimNakitBu)) ? fn.isletmeNakitBu + fn.yatirimNakitBu : null;
+      const fcfOncekiVal = (Number.isFinite(fn.isletmeNakitOnceki) && Number.isFinite(fn.yatirimNakitOnceki)) ? fn.isletmeNakitOnceki + fn.yatirimNakitOnceki : null;
       renderFinRow('Fcf', fcfBuVal, fcfOncekiVal);
 
       els.finCariOran.textContent = Number.isFinite(derived.currentRatio) ? fmt1(derived.currentRatio) + 'x' : '—';
@@ -1727,6 +1849,12 @@ function init() {
     state.kapRaporDraft.push({ yil: '', url: '', ozet: '' });
     renderKapRaporEntries();
   });
+  els.addFinancialsBtn.addEventListener('click', () => {
+    state.financialsDraft.push({ period: '' });
+    renderFinancialsEntries();
+  });
+  if (els.f_compare_a) els.f_compare_a.addEventListener('change', () => renderCompareSelectors(els.f_compare_a.value, els.f_compare_b.value));
+  if (els.f_compare_b) els.f_compare_b.addEventListener('change', () => renderCompareSelectors(els.f_compare_a.value, els.f_compare_b.value));
   els.editBenchmarkBtn.addEventListener('click', () => {
     els.benchmarkForm.hidden = !els.benchmarkForm.hidden;
   });
@@ -1735,6 +1863,7 @@ function init() {
   els.refreshDovizBtn.addEventListener('click', rvFetchDovizKurlari);
   els.saveMacroBtn.addEventListener('click', handleSaveMacro);
   rvFetchDovizKurlari();
+  if (els.fetchEvdsBtn) els.fetchEvdsBtn.addEventListener('click', rvFetchEvdsMacro);
 
   if (els.monthlyManualSaveBtn) els.monthlyManualSaveBtn.addEventListener('click', handleMonthlyManualSave);
   if (els.aiExtractBtn) els.aiExtractBtn.addEventListener('click', handleAiExtract);

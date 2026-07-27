@@ -48,15 +48,14 @@
   <nav id="sectionNav" class="section-nav" aria-label="Veri Girişi Bölümleri" hidden>
     <p class="sidebar__subtitle">Veri Girişi Bölümleri</p>
     <ul class="section-nav-list">
-      <li><button type="button" class="section-nav-link" data-target="accordion-1">1 · Özet Bilanço &amp; Gelir Tablosu</button></li>
-      <li><button type="button" class="section-nav-link" data-target="accordion-2">2 · Özet Nakit Akış Tablosu</button></li>
-      <li><button type="button" class="section-nav-link" data-target="accordion-3">3 · Sektör Ortalama Çarpanları</button></li>
-      <li><button type="button" class="section-nav-link" data-target="accordion-4">4 · Yönetim Takibi</button></li>
-      <li><button type="button" class="section-nav-link" data-target="accordion-5">5 · KAP Etki Kayıtları</button></li>
-      <li><button type="button" class="section-nav-link" data-target="accordion-6">6 · Portföy Pozisyonu</button></li>
-      <li><button type="button" class="section-nav-link" data-target="accordion-7">7 · Sektör &amp; Makro Görünüm</button></li>
-      <li><button type="button" class="section-nav-link" data-target="accordion-8">8 · Manipülasyon Riski Girdileri</button></li>
-      <li><button type="button" class="section-nav-link" data-target="accordion-9">9 · KAP Faaliyet Raporları</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-1">1 · Mali Dönem Verileri</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-2">2 · Sektör Ortalama Çarpanları</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-3">3 · Yönetim Takibi</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-4">4 · KAP Etki Kayıtları</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-5">5 · Portföy Pozisyonu</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-6">6 · Sektör &amp; Makro Görünüm</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-7">7 · Manipülasyon Riski Girdileri</button></li>
+      <li><button type="button" class="section-nav-link" data-target="accordion-8">8 · KAP Faaliyet Raporları</button></li>
     </ul>
   </nav>
 
@@ -187,13 +186,13 @@
         <span class="macro-value" id="macroEur">—</span>
       </div>
       <div class="macro-item">
-        <span class="macro-badge macro-badge--manual">✍️ Manuel</span>
+        <span class="macro-badge macro-badge--auto">🔄 Otomatik</span>
         <span class="macro-label">TÜFE Yıllık (%)</span>
         <input type="number" step="any" id="m_tufe" class="macro-input">
       </div>
       <div class="macro-item">
-        <span class="macro-badge macro-badge--manual">✍️ Manuel</span>
-        <span class="macro-label">Politika Faizi (%)</span>
+        <span class="macro-badge macro-badge--auto">🔄 Otomatik*</span>
+        <span class="macro-label">Fonlama Maliyeti (%)</span>
         <input type="number" step="any" id="m_faiz" class="macro-input">
       </div>
       <div class="macro-item">
@@ -209,9 +208,12 @@
     </div>
 
     <div class="macro-footer">
+      <button type="button" id="fetchEvdsBtn" class="btn btn--ghost">↻ TÜFE/Fonlama Maliyetini TCMB'den Çek</button>
       <span id="macroUpdated" class="muted-note"></span>
       <button type="button" id="saveMacroBtn" class="btn btn--primary">Manuel Verileri Kaydet</button>
     </div>
+    <p id="evdsStatus" class="muted-note"></p>
+    <p class="fair-value-note">* "Fonlama Maliyeti", TCMB'nin Ağırlıklı Ortalama Fonlama Maliyeti serisidir (TP.APIFON4) — resmi ilan edilen politika faiziyle pratikte çok yakından hareket eder ama birebir aynı seri değildir, yaklaşık bir gösterge olarak kullan. TÜFE/Fonlama çekmek için EVDS API anahtarı gerekir — bkz. EVDS-KURULUM.md.</p>
     <p id="macroError" class="login-error" hidden></p>
 
     <div id="sectorSensitivityPanel" class="sector-sensitivity">
@@ -274,200 +276,26 @@
       </div>
 
       <details id="accordion-1" class="accordion" open>
-        <summary>1 · Özet Bilanço &amp; Gelir Tablosu — Bu Çeyrek / Önceki Çeyrek</summary>
-        <p class="hint" style="margin-top:0;">Gelir Tablosu</p>
-        <div class="fin-row">
-          <span class="fin-row__label">Net Satışlar (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_satis_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_satis_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">Brüt Kâr (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_brut_kar_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_brut_kar_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">FAVÖK (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_favok_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_favok_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">Faaliyet Kârı / EBİT (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_faaliyet_kari_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_faaliyet_kari_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">Net Kâr (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_netkar_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_netkar_onceki">
-            </label>
-          </div>
-        </div>
-        <p class="hint">Bilanço</p>
-        <div class="fin-row">
-          <span class="fin-row__label">Dönen Varlıklar (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_donen_varlik_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_donen_varlik_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">Duran Varlıklar (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_duran_varlik_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_duran_varlik_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">Kısa Vadeli Yükümlülükler (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_kv_yukumluluk_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_kv_yukumluluk_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">Uzun Vadeli Yükümlülükler (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_uv_yukumluluk_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_uv_yukumluluk_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">Net Borç (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_netborc_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_netborc_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">Özkaynaklar (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_ozkaynak_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_ozkaynak_onceki">
-            </label>
-          </div>
+        <summary>1 · Mali Dönem Verileri (İstediğin Kadar Dönem Ekle)</summary>
+        <p class="hint" style="margin-top:0;">Her dönem için (örn. "2026/Q2") bir kayıt ekle, 16 kalemi doldur. İstediğin kadar dönem ekleyebilirsin — aşağıda hangi iki dönemi karşılaştırıp Dr. Uzman'ın skorlamasında kullanacağını seçiyorsun.</p>
+
+        <button type="button" id="addFinancialsBtn" class="btn btn--primary">+ Yeni Dönem Ekle</button>
+        <div id="financialsEntries" class="financials-entries"></div>
+        <p id="financialsEmptyNote" class="muted-note">Henüz dönem eklenmedi. "+ Yeni Dönem Ekle" ile başla.</p>
+
+        <p class="hint" style="margin-top:16px;">Karşılaştırma Dönemleri — Dr. Uzman'ın skorlaması ve "Değişim %" hesapları bu iki dönem arasındaki farka göre yapılır.</p>
+        <div class="field-row">
+          <label>Cari Dönem (A)
+            <select id="f_compare_a"></select>
+          </label>
+          <label>Karşılaştırılan Dönem (B)
+            <select id="f_compare_b"></select>
+          </label>
         </div>
       </details>
 
       <details id="accordion-2" class="accordion">
-        <summary>2 · Özet Nakit Akış Tablosu — Bu Çeyrek / Önceki Çeyrek</summary>
-        <div class="fin-row">
-          <span class="fin-row__label">İşletme Faaliyetlerinden Nakit Akışı (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_isletme_nakit_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_isletme_nakit_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">Yatırım Faaliyetlerinden Nakit Akışı (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_yatirim_nakit_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_yatirim_nakit_onceki">
-            </label>
-          </div>
-        </div>
-        <div class="fin-row">
-          <span class="fin-row__label">Finansman Faaliyetlerinden Nakit Akışı (mn ₺)</span>
-          <div class="fin-row__inputs">
-            <label class="fin-input">
-              <span class="fin-input__cap">Bu Çeyrek</span>
-              <input type="number" step="any" id="f_finansman_nakit_bu">
-            </label>
-            <label class="fin-input">
-              <span class="fin-input__cap">Önceki Çeyrek</span>
-              <input type="number" step="any" id="f_finansman_nakit_onceki">
-            </label>
-          </div>
-        </div>
-        <p class="hint">Serbest Nakit Akışı otomatik hesaplanır (İşletme + Yatırım Nakit Akışı).</p>
-      </details>
-
-      <details id="accordion-3" class="accordion">
-        <summary>3 · Sektör Ortalama Çarpanları</summary>
+        <summary>2 · Sektör Ortalama Çarpanları</summary>
         <p class="hint">Şirketin kendi çarpanlarını artık elle girmene gerek yok — güncel fiyat ve hisse sayısından otomatik hesaplanıyor (bkz. bölüm 6). Burada yalnızca kıyaslama için sektör ortalamasını gir.</p>
         <div class="field-row">
           <label>Sektör Ort. F/K
@@ -482,8 +310,8 @@
         </div>
       </details>
 
-      <details id="accordion-4" class="accordion">
-        <summary>4 · Yönetim Takibi</summary>
+      <details id="accordion-3" class="accordion">
+        <summary>3 · Yönetim Takibi</summary>
         <div class="field-row">
           <label>Verilen Söz Sayısı
             <input type="number" min="0" step="1" id="f_soz_verilen">
@@ -494,15 +322,15 @@
         </div>
       </details>
 
-      <details id="accordion-5" class="accordion">
-        <summary>5 · KAP Etki Kayıtları</summary>
+      <details id="accordion-4" class="accordion">
+        <summary>4 · KAP Etki Kayıtları</summary>
         <p class="hint">Geçmiş KAP açıklamalarını ve ertesi gün fiyat tepkisini kaydedin.</p>
         <div id="kapEntries" class="kap-entries"></div>
         <button type="button" id="addKapBtn" class="btn btn--ghost">+ KAP Kaydı Ekle</button>
       </details>
 
-      <details id="accordion-6" class="accordion">
-        <summary>6 · Portföy Pozisyonu</summary>
+      <details id="accordion-5" class="accordion">
+        <summary>5 · Portföy Pozisyonu</summary>
         <p class="hint">Portföy ağırlığın artık elle girilmiyor — buradaki verilerden otomatik hesaplanıyor.</p>
         <div class="field-row">
           <label>Güncel Fiyat (₺)
@@ -523,8 +351,8 @@
         </div>
       </details>
 
-      <details id="accordion-7" class="accordion">
-        <summary>7 · Sektör &amp; Makro Görünüm</summary>
+      <details id="accordion-6" class="accordion">
+        <summary>6 · Sektör &amp; Makro Görünüm</summary>
         <div class="field-row">
           <label>Sektör Görünümü <span class="range-out" id="sektorGorunumOut">5</span>/10
             <input type="range" min="1" max="10" step="1" id="f_sektor_gorunum" value="5">
@@ -532,8 +360,8 @@
         </div>
       </details>
 
-      <details id="accordion-8" class="accordion">
-        <summary>8 · Manipülasyon Riski Girdileri</summary>
+      <details id="accordion-7" class="accordion">
+        <summary>7 · Manipülasyon Riski Girdileri</summary>
         <p class="hint">Bu girdiler "manipülasyon var" demez — yalnızca hissenin yapısal olarak manipülasyona ne kadar açık olduğunu gösterir (küçük piyasa değeri + düşük halka açıklık + düşük hacim + sık KAP açıklaması = daha kırılgan).</p>
         <div class="field-row">
           <label>Halka Açıklık Oranı (%)
@@ -548,8 +376,8 @@
         </div>
       </details>
 
-      <details id="accordion-9" class="accordion">
-        <summary>9 · KAP Faaliyet Raporları</summary>
+      <details id="accordion-8" class="accordion">
+        <summary>8 · KAP Faaliyet Raporları</summary>
         <p class="hint">PDF'i kopyalamıyoruz — KAP'taki ilgili bildirime doğrudan bağlantı veriyoruz. İstersen kendi kısa özetini de ekleyebilirsin.</p>
         <div id="kapRaporEntries" class="kap-rapor-entries"></div>
         <button type="button" id="addKapRaporBtn" class="btn btn--ghost">+ Faaliyet Raporu Ekle</button>
@@ -692,7 +520,7 @@
       <div class="tab-pane" data-tab="mali">
 
         <div class="panel financials-panel" id="financialsPanel" hidden>
-          <h3 class="panel-title">Özet Mali Tablolar</h3>
+          <h3 class="panel-title">Özet Mali Tablolar — <span id="finPeriodLabelA">Dönem A</span> vs <span id="finPeriodLabelB">Dönem B</span></h3>
 
           <div class="fin-summary-grid">
             <div class="fin-summary-col">
@@ -723,6 +551,7 @@
             <div class="fin-summary-row"><span>İşletme Nakit Akışı</span><span id="finIsletmeNakitBu" class="fin-pill"></span><span id="finIsletmeNakitOnceki" class="fin-pill fin-pill--muted"></span><span id="finIsletmeNakitChg" class="fin-chg"></span></div>
             <div class="fin-summary-row"><span>Yatırım Nakit Akışı</span><span id="finYatirimNakitBu" class="fin-pill"></span><span id="finYatirimNakitOnceki" class="fin-pill fin-pill--muted"></span><span id="finYatirimNakitChg" class="fin-chg"></span></div>
             <div class="fin-summary-row"><span>Finansman Nakit Akışı</span><span id="finFinansmanNakitBu" class="fin-pill"></span><span id="finFinansmanNakitOnceki" class="fin-pill fin-pill--muted"></span><span id="finFinansmanNakitChg" class="fin-chg"></span></div>
+            <div class="fin-summary-row"><span>Dönem Sonu Nakit</span><span id="finDonemSonuNakitBu" class="fin-pill"></span><span id="finDonemSonuNakitOnceki" class="fin-pill fin-pill--muted"></span><span id="finDonemSonuNakitChg" class="fin-chg"></span></div>
             <div class="fin-summary-row"><span>Serbest Nakit Akışı</span><span id="finFcfBu" class="fin-pill"></span><span id="finFcfOnceki" class="fin-pill fin-pill--muted"></span><span id="finFcfChg" class="fin-chg"></span></div>
           </div>
 

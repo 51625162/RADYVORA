@@ -17,15 +17,19 @@ const RADYVORA_ALLOWED_ORIGIN = '*';
 // const RADYVORA_ALLOWED_ORIGIN = 'https://51625162.github.io';
 
 const FINANCIALS_SCHEMA_HINT = `{
-  "bu_donem": {
-    "satis": number|null, "brut_kar": number|null, "favok": number|null,
-    "faaliyet_kari": number|null, "net_kar": number|null,
-    "donen_varlik": number|null, "duran_varlik": number|null,
-    "kv_yukumluluk": number|null, "uv_yukumluluk": number|null,
-    "net_borc": number|null, "ozkaynaklar": number|null,
-    "isletme_nakit": number|null, "yatirim_nakit": number|null, "finansman_nakit": number|null
-  },
-  "onceki_donem": { /* bu_donem ile aynı alanlar, karşılaştırmalı önceki dönem */ }
+  "periods": [
+    {
+      "period_label": string,  // belgede yazan dönem etiketi, örn. "2026/6" veya "2026 2. Çeyrek"
+      "satis": number|null, "brut_kar": number|null, "favok": number|null,
+      "faaliyet_kari": number|null, "net_kar": number|null,
+      "donen_varlik": number|null, "duran_varlik": number|null,
+      "kv_yukumluluk": number|null, "uv_yukumluluk": number|null,
+      "net_borc": number|null, "ozkaynaklar": number|null,
+      "isletme_nakit": number|null, "yatirim_nakit": number|null, "finansman_nakit": number|null,
+      "donem_sonu_nakit": number|null
+    }
+    /* belgede kaç farklı dönem (sütun) varsa hepsi için birer nesne, bu dizinin içine sırayla eklenir */
+  ]
 }`;
 
 function corsHeaders() {
@@ -44,11 +48,13 @@ async function handleExtractFinancials(body, env) {
 
   const systemPrompt =
     'Sen bir finansal veri çıkarma asistanısın. Sana bir Türkiye şirketinin KAP bilanço/gelir tablosu/nakit akış tablosu ' +
-    '(PDF veya Excel\'den metne çevrilmiş hali) verilecek. Görevin SADECE aşağıdaki JSON şemasına uygun, ' +
-    'başka hiçbir açıklama, önsöz veya kod bloğu işareti olmadan bir JSON döndürmek:\n' +
+    '(PDF veya Excel\'den metne çevrilmiş hali) verilecek. Belgede genellikle birden fazla dönem (sütun) olur — ' +
+    'örneğin cari dönem ve karşılaştırmalı önceki dönem, bazen daha fazlası. Görevin SADECE aşağıdaki JSON şemasına ' +
+    'uygun, başka hiçbir açıklama, önsöz veya kod bloğu işareti olmadan bir JSON döndürmek:\n' +
     FINANCIALS_SCHEMA_HINT +
     '\nTüm rakamları milyon TL (mn ₺) cinsinden, düz ondalıklı sayı olarak ver (binlik ayraç kullanma, ondalık için nokta kullan). ' +
-    '"bu_donem" belgedeki en güncel/son dönem sütunu, "onceki_donem" ise karşılaştırmalı önceki dönem sütunudur. ' +
+    'Belgede kaç dönem/sütun görürsen "periods" dizisine hepsini ayrı ayrı ekle (en güncel dönem dizinin ilk elemanı olsun). ' +
+    'Her dönem için "period_label" alanına belgede o sütunun başlığında yazan tarihi/dönemi olduğu gibi yaz. ' +
     'Bir kalemi belgede bulamazsan o alanı null yap, tahmin etme.';
 
   const contentBlocks = [];
@@ -98,6 +104,78 @@ async function handleExtractFinancials(body, env) {
   return new Response(JSON.stringify(parsed), { headers: { ...corsHeaders(), 'Content-Type': 'application/json' } });
 }
 
+/* ================================================================
+   TCMB EVDS — TÜFE Yıllık % ve Fonlama Maliyeti (Politika Faizi
+   göstergesi olarak kullanılır). Ayrı bir EVDS API anahtarı gerekir
+   (env.EVDS_API_KEY) — bkz. EVDS-KURULUM.md.
+
+   Not: TP.APIFON4, TCMB'nin "Ağırlıklı Ortalama Fonlama Maliyeti"
+   serisidir — resmi ilan edilen 1 hafta repo faiziyle pratikte çok
+   yakından hareket eder ama birebir aynı seri değildir. Bu farkı
+   kullanıcıya açıkça belirtiyoruz (script.js tarafında).
+================================================================ */
+function evdsDateFmt(d) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+}
+
+async function handleGetMacro(env) {
+  const headers = { ...corsHeaders(), 'Content-Type': 'application/json' };
+  if (!env.EVDS_API_KEY) {
+    return new Response(JSON.stringify({ error: 'EVDS API anahtarı Worker\'a eklenmedi (bkz. EVDS-KURULUM.md).' }), { status: 400, headers });
+  }
+
+  const today = new Date();
+  const start = new Date(today);
+  start.setFullYear(start.getFullYear() - 2);
+
+  const url = `https://evds2.tcmb.gov.tr/service/evds/series=TP.FG.J0-TP.APIFON4&startDate=${evdsDateFmt(start)}&endDate=${evdsDateFmt(today)}&type=json&frequency=5`;
+
+  let res;
+  try {
+    res = await fetch(url, { headers: { key: env.EVDS_API_KEY } });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'EVDS\'ye ulaşılamadı: ' + e.message }), { status: 502, headers });
+  }
+  if (!res.ok) {
+    return new Response(JSON.stringify({ error: 'EVDS isteği başarısız oldu (kod ' + res.status + '). API anahtarını kontrol et.' }), { status: 500, headers });
+  }
+
+  let json;
+  try {
+    json = await res.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'EVDS yanıtı okunamadı.' }), { status: 500, headers });
+  }
+
+  const items = json.items || [];
+  const tufeItems = items.filter(it => it.TP_FG_J0 !== null && it.TP_FG_J0 !== undefined && it.TP_FG_J0 !== '');
+  const faizItems = items.filter(it => it.TP_APIFON4 !== null && it.TP_APIFON4 !== undefined && it.TP_APIFON4 !== '');
+
+  let tufeYillik = null;
+  let asOf = null;
+  if (tufeItems.length >= 13) {
+    const last = tufeItems[tufeItems.length - 1];
+    const yearAgo = tufeItems[tufeItems.length - 13];
+    const lastVal = parseFloat(last.TP_FG_J0);
+    const yearAgoVal = parseFloat(yearAgo.TP_FG_J0);
+    if (Number.isFinite(lastVal) && Number.isFinite(yearAgoVal) && yearAgoVal !== 0) {
+      tufeYillik = ((lastVal / yearAgoVal) - 1) * 100;
+    }
+    asOf = last.Tarih;
+  }
+
+  let faiz = null;
+  if (faizItems.length) {
+    const lastFaiz = faizItems[faizItems.length - 1];
+    const v = parseFloat(lastFaiz.TP_APIFON4);
+    if (Number.isFinite(v)) faiz = v;
+    if (!asOf) asOf = lastFaiz.Tarih;
+  }
+
+  return new Response(JSON.stringify({ tufe_yillik: tufeYillik, faiz, asOf }), { headers });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') {
@@ -116,6 +194,9 @@ export default {
 
     if (body.action === 'extract_financials') {
       return handleExtractFinancials(body, env);
+    }
+    if (body.action === 'get_macro') {
+      return handleGetMacro(env);
     }
 
     return new Response(JSON.stringify({ error: 'Bilinmeyen action: ' + body.action }), { status: 400, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } });
