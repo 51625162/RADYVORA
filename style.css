@@ -1140,3 +1140,30 @@ input::placeholder, textarea::placeholder{ color: #A6AEC2; }
 .fin-chg.pos{ color: var(--primary-dim); }
 .fin-chg.neg{ color: var(--red); }
 .fin-chg.notr{ color: var(--text-dim); }
+
+/* ---------- Ayarlar Görünümü ---------- */
+.settings-view{
+  max-width: 900px;
+  margin: 24px auto;
+  padding: 0 24px;
+}
+.settings-nav{ margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--sidebar-line); }
+
+/* ---------- Fiyat Alarmları ---------- */
+.alarm-list{ margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.alarm-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.alarm-row.is-triggered{ border-color: var(--primary); background: var(--primary-soft); }
+.alarm-row__label{ font-family: var(--font-mono); }
+.alarm-row__status{ font-weight: 600; }
+.alarm-row__status.triggered{ color: var(--primary-dim); }
+.alarm-row__status.waiting{ color: var(--text-dim); }

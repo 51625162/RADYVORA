@@ -68,6 +68,12 @@
       <li><button type="button" class="section-nav-link" data-tab="kap">KAP &amp; Yönetim</button></li>
     </ul>
   </nav>
+
+  <nav class="section-nav settings-nav" aria-label="Ayarlar">
+    <ul class="section-nav-list">
+      <li><button type="button" id="settingsNavBtn" class="section-nav-link">⚙ Ayarlar</button></li>
+    </ul>
+  </nav>
 </aside>
 
 <div id="appMain" class="app-main">
@@ -204,7 +210,7 @@
   </div>
 </section>
 
-<main class="workspace">
+<main class="workspace" id="mainWorkspace">
 
   <!-- LEFT: Data entry -->
   <section class="ledger-col" aria-label="Veri girişi">
@@ -754,6 +760,43 @@
     </section>
 
 </main>
+
+<section id="settingsView" class="settings-view" hidden>
+  <div class="panel">
+    <div class="panel__head">
+      <h2>Ayarlar</h2>
+      <button type="button" id="settingsBackBtn" class="btn btn--ghost">← Geri</button>
+    </div>
+
+    <h3 class="panel-title">Hesap</h3>
+    <p class="hint">Giriş yapılan hesap: <strong id="settingsUserEmail">—</strong></p>
+    <button type="button" id="settingsLogoutBtn" class="btn btn--ghost btn--danger">Çıkış Yap</button>
+  </div>
+
+  <div class="panel">
+    <h3 class="panel-title">Fiyat Alarmları</h3>
+    <p class="hint">Bir şirket seç, hedef fiyat belirle — güncel fiyat girdiğinde/güncellendiğinde o seviyeye ulaşmışsa burada ve (izin verirsen) tarayıcı bildirimlerinde uyarı görürsün. Bu bir al/sat tavsiyesi değildir, sadece hatırlatmadır.</p>
+
+    <div class="field-row">
+      <label>Şirket
+        <select id="alarmCompanySelect"></select>
+      </label>
+      <label>Hedef Fiyat (₺)
+        <input type="number" step="any" id="alarmPriceInput">
+      </label>
+      <label>Yön
+        <select id="alarmDirectionSelect">
+          <option value="above">Üzerine çıkınca</option>
+          <option value="below">Altına inince</option>
+        </select>
+      </label>
+      <button type="button" id="alarmAddBtn" class="btn btn--primary">Alarm Ekle</button>
+    </div>
+
+    <div id="alarmList" class="alarm-list"></div>
+    <p id="alarmEmptyNote" class="muted-note">Henüz alarm eklenmedi.</p>
+  </div>
+</section>
 
 <footer class="site-footer">
   <p>RADYVORA · Veriler Firebase üzerinde, yalnızca kendi hesabınla eriştiğin şekilde saklanır.</p>

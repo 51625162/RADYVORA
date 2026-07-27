@@ -77,6 +77,8 @@ function rvStartListening() {
       rvSyncSectionNav();
       renderPortfolioSummary();
       rvAutoSnapshotMonthly();
+      checkAlarms();
+      if (els.settingsView && !els.settingsView.hidden) { renderAlarmCompanySelect(); renderAlarmList(); }
     },
     (err) => {
       console.error('RADYVORA: Firestore okuma hatası', err);
@@ -959,6 +961,9 @@ function cacheEls() {
     'sectorComparePanel', 'sectorCompareHint', 'sectorCompareTable',
     'valueGaugeMarker',
     'dashboardTabsNav',
+    'mainWorkspace',
+    'settingsNavBtn', 'settingsView', 'settingsBackBtn', 'settingsUserEmail', 'settingsLogoutBtn',
+    'alarmCompanySelect', 'alarmPriceInput', 'alarmDirectionSelect', 'alarmAddBtn', 'alarmList', 'alarmEmptyNote',
     'aiFileInput', 'aiExtractBtn', 'aiExtractStatus'
   ].forEach(id => { els[id] = document.getElementById(id); });
 }
@@ -970,6 +975,7 @@ function readForm() {
   // kaydet formu tam üzerine yazdığı için mevcut geçmişi burada koruyoruz.
   const existing = state.companies.find(x => x.id === state.activeId);
   const aylikGecmis = existing && Array.isArray(existing.aylikGecmis) ? existing.aylikGecmis.slice() : [];
+  const alarms = existing && Array.isArray(existing.alarms) ? existing.alarms.slice() : [];
   return {
     id: state.activeId || ('c_' + Date.now()),
     name: val('f_name').trim() || 'İsimsiz Şirket',
@@ -997,7 +1003,8 @@ function readForm() {
     halkaAciklik: num('f_halka_aciklik'), gunlukHacim: num('f_gunluk_hacim'), kapSikligi: num('f_kap_sikligi'),
     kap: state.kapDraft.slice(),
     kapRapor: state.kapRaporDraft.slice(),
-    aylikGecmis
+    aylikGecmis,
+    alarms
   };
 }
 
@@ -1184,6 +1191,130 @@ function renderSectorComparison(c) {
       <span>Şirket</span><span>F/K</span><span>PD/DD</span><span>FD/FAVÖK</span><span>Genel Skor</span><span>Değerleme</span>
     </div>
     ${rowsHtml}`;
+}
+
+/* ================================================================
+   AYARLAR GÖRÜNÜMÜ
+================================================================ */
+function showSettingsView() {
+  if (els.mainWorkspace) els.mainWorkspace.hidden = true;
+  if (els.settingsView) els.settingsView.hidden = false;
+  if (els.settingsUserEmail && typeof rvCurrentUser !== 'undefined' && rvCurrentUser) {
+    els.settingsUserEmail.textContent = rvCurrentUser.email || '—';
+  }
+  renderAlarmCompanySelect();
+  renderAlarmList();
+}
+function hideSettingsView() {
+  if (els.mainWorkspace) els.mainWorkspace.hidden = false;
+  if (els.settingsView) els.settingsView.hidden = true;
+}
+
+/* ================================================================
+   FİYAT ALARMLARI
+   Her şirketin kendi kaydında "alarms" dizisi tutulur:
+   { price, direction: 'above'|'below', triggered }
+   Bu bir al/sat tavsiyesi değildir, sadece hatırlatmadır. Site açık
+   değilken (arka planda) tetiklenemez — sadece site açıkken ve fiyat
+   verisi güncellendiğinde kontrol edilir.
+================================================================ */
+const rvNotifiedAlarms = new Set();
+
+function renderAlarmCompanySelect() {
+  if (!els.alarmCompanySelect) return;
+  const current = els.alarmCompanySelect.value;
+  els.alarmCompanySelect.innerHTML = state.companies.map(c =>
+    `<option value="${c.id}">${escapeHtml(c.name)} (${escapeHtml(c.ticker)})</option>`
+  ).join('');
+  if (current && state.companies.some(c => c.id === current)) els.alarmCompanySelect.value = current;
+}
+
+function handleAddAlarm() {
+  const companyId = els.alarmCompanySelect.value;
+  const price = parseFloat(els.alarmPriceInput.value);
+  const direction = els.alarmDirectionSelect.value;
+  if (!companyId) { alert('Önce bir şirket seç.'); return; }
+  if (!Number.isFinite(price)) { alert('Geçerli bir hedef fiyat gir.'); return; }
+
+  const c = state.companies.find(x => x.id === companyId);
+  const ref = rvCompaniesRef();
+  if (!c || !ref) return;
+
+  const alarms = Array.isArray(c.alarms) ? c.alarms.slice() : [];
+  alarms.push({ price, direction, triggered: false });
+
+  ref.doc(companyId).set({ alarms }, { merge: true })
+    .then(() => {
+      els.alarmPriceInput.value = '';
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    })
+    .catch((err) => alert('Alarm eklenemedi: ' + err.message));
+}
+
+function handleDeleteAlarm(companyId, idx) {
+  const c = state.companies.find(x => x.id === companyId);
+  const ref = rvCompaniesRef();
+  if (!c || !ref) return;
+  const alarms = (c.alarms || []).slice();
+  alarms.splice(idx, 1);
+  ref.doc(companyId).set({ alarms }, { merge: true }).catch((err) => alert('Silinemedi: ' + err.message));
+}
+
+function renderAlarmList() {
+  if (!els.alarmList) return;
+  const rows = [];
+  state.companies.forEach((c) => {
+    (c.alarms || []).forEach((a, idx) => {
+      rows.push({ c, a, idx });
+    });
+  });
+
+  els.alarmEmptyNote.hidden = rows.length > 0;
+  els.alarmList.innerHTML = rows.map(({ c, a, idx }) => {
+    const dirText = a.direction === 'above' ? 'üzerine çıkınca' : 'altına inince';
+    const statusText = a.triggered ? 'Tetiklendi' : 'Bekleniyor';
+    const statusCls = a.triggered ? 'triggered' : 'waiting';
+    return `
+      <div class="alarm-row${a.triggered ? ' is-triggered' : ''}">
+        <span class="alarm-row__label">${escapeHtml(c.name)} (${escapeHtml(c.ticker)}) — ${fmt1(a.price)} ₺ ${dirText}</span>
+        <span class="alarm-row__status ${statusCls}">${statusText}</span>
+        <button type="button" class="btn btn--ghost" data-del-alarm="${c.id}" data-del-idx="${idx}">Sil</button>
+      </div>`;
+  }).join('');
+}
+
+function checkAlarms() {
+  let anyTriggeredNew = false;
+  state.companies.forEach((c) => {
+    if (!Array.isArray(c.alarms) || !c.alarms.length) return;
+    if (!Number.isFinite(c.guncelFiyat)) return;
+    let changed = false;
+    const updated = c.alarms.map((a, idx) => {
+      const shouldTrigger = a.direction === 'above' ? c.guncelFiyat >= a.price : c.guncelFiyat <= a.price;
+      if (shouldTrigger && !a.triggered) {
+        changed = true;
+        anyTriggeredNew = true;
+        const key = c.id + ':' + idx;
+        if (!rvNotifiedAlarms.has(key)) {
+          rvNotifiedAlarms.add(key);
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            new Notification('RADYVORA — Fiyat Alarmı', {
+              body: `${c.name} (${c.ticker}) ${fmt1(a.price)} ₺ ${a.direction === 'above' ? 'üzerine çıktı' : 'altına indi'}.`
+            });
+          }
+        }
+        return { ...a, triggered: true };
+      }
+      return a;
+    });
+    if (changed) {
+      const ref = rvCompaniesRef();
+      if (ref) ref.doc(c.id).set({ alarms: updated }, { merge: true }).catch(() => {});
+    }
+  });
+  if (anyTriggeredNew && els.settingsView && !els.settingsView.hidden) renderAlarmList();
 }
 
 function renderDashboard(c) {
@@ -1602,6 +1733,28 @@ function init() {
       els.dashboardTabsNav.querySelectorAll('.section-nav-link').forEach((b) => b.classList.toggle('is-active', b === btn));
       document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('is-active', p.dataset.tab === tab));
       if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
+    });
+  }
+
+  /* Ayarlar görünümü (fiyat alarmları + hesap) */
+  if (els.settingsNavBtn) {
+    els.settingsNavBtn.addEventListener('click', () => {
+      showSettingsView();
+      if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
+    });
+  }
+  if (els.settingsBackBtn) els.settingsBackBtn.addEventListener('click', hideSettingsView);
+  if (els.settingsLogoutBtn) {
+    els.settingsLogoutBtn.addEventListener('click', () => {
+      if (els.logoutBtn) els.logoutBtn.click();
+    });
+  }
+  if (els.alarmAddBtn) els.alarmAddBtn.addEventListener('click', handleAddAlarm);
+  if (els.alarmList) {
+    els.alarmList.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-del-alarm]');
+      if (!btn) return;
+      handleDeleteAlarm(btn.dataset.delAlarm, parseInt(btn.dataset.delIdx, 10));
     });
   }
 }
