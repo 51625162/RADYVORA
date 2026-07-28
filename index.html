@@ -72,6 +72,7 @@
 
   <nav class="section-nav settings-nav" aria-label="Ayarlar">
     <ul class="section-nav-list">
+      <li><button type="button" id="usPortfolioNavBtn" class="section-nav-link">🇺🇸 ABD Portföyü</button></li>
       <li><button type="button" id="settingsNavBtn" class="section-nav-link">⚙ Ayarlar</button></li>
     </ul>
   </nav>
@@ -136,6 +137,12 @@
     </div>
 
     <div id="pfEmptyNote" class="muted-note">Şirketlere güncel fiyat ve adet girdiğinde portföy özeti burada oluşur.</div>
+
+    <div class="portfolio-table-wrap">
+      <h3 class="panel-title">Pozisyonlar</h3>
+      <p class="hint">Maliyet Fiyatı ve Adet'i doldurup dışarı tıklayınca otomatik kaydedilir — portföye eklemiş olursun. "Kaldır" pozisyonu temizler, şirketi silmez (şirketin analiz verileri kalır).</p>
+      <div class="portfolio-table" id="portfolioTable"></div>
+    </div>
 
     <div id="pfBestWorstPanel" class="portfolio-cards" hidden>
       <div class="portfolio-card">
@@ -623,6 +630,47 @@
     </section>
 
 </main>
+
+<section id="usPortfolioView" class="settings-view us-portfolio-view" hidden>
+  <div class="panel">
+    <div class="panel__head">
+      <h2>🇺🇸 ABD Portföyü</h2>
+      <button type="button" id="usPortfolioBackBtn" class="btn btn--ghost">← Geri</button>
+    </div>
+    <p class="hint">RADYVORA'nın BIST analiz motorundan (Dr. Uzman) bağımsız, sade bir ABD hissesi portföy/fiyat takip bölümü. Al/sat tavsiyesi vermez.</p>
+
+    <div class="portfolio-cards">
+      <div class="portfolio-card">
+        <span class="portfolio-card__label">Toplam Maliyet</span>
+        <span class="portfolio-card__value" id="usTotalCost">—</span>
+      </div>
+      <div class="portfolio-card">
+        <span class="portfolio-card__label">Güncel Değer</span>
+        <span class="portfolio-card__value" id="usTotalValue">—</span>
+      </div>
+      <div class="portfolio-card">
+        <span class="portfolio-card__label">Kâr/Zarar</span>
+        <span class="portfolio-card__value" id="usPnl">—</span>
+      </div>
+    </div>
+
+    <button type="button" id="usAddStockBtn" class="btn btn--primary" style="margin-top:14px;">+ Hisse Ekle</button>
+    <div class="portfolio-table us-portfolio-table" id="usPortfolioTable"></div>
+    <p id="usEmptyNote" class="muted-note">Henüz hisse eklenmedi. "+ Hisse Ekle" ile başla.</p>
+  </div>
+
+  <div class="panel">
+    <h3 class="panel-title">Portföyün Günlük Değişimi</h3>
+    <canvas id="usDailyCanvas" width="640" height="220"></canvas>
+    <p id="usDailyEmptyNote" class="muted-note">Henüz gün gün kıyaslama için yeterli veri yok.</p>
+  </div>
+
+  <div class="panel">
+    <h3 class="panel-title">Portföyün Yıllara Göre Değişimi</h3>
+    <canvas id="usYearlyCanvas" width="640" height="220"></canvas>
+    <p id="usYearlyEmptyNote" class="muted-note">Henüz yıllar arası kıyaslama için yeterli geçmiş veri yok.</p>
+  </div>
+</section>
 
 <section id="settingsView" class="settings-view" hidden>
   <div class="panel">

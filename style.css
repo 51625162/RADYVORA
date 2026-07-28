@@ -1291,3 +1291,100 @@ input::placeholder, textarea::placeholder{ color: #A6AEC2; }
 /* ---------- Portföyün Yıllara Göre Değişimi ---------- */
 .yearly-panel{ margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
 #yearlyCanvas{ width: 100%; height: 220px; max-width: 640px; }
+
+/* ---------- Portföy Tablosu (ekle/kaldır) ---------- */
+.portfolio-table-wrap{ margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.portfolio-table{ display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.portfolio-table__row{
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 0.8fr 1fr 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 13px;
+}
+.portfolio-table__row--head{
+  background: transparent;
+  border: none;
+  padding: 0 10px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+.portfolio-table__name{ font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.portfolio-table__row input{
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text);
+}
+.portfolio-table__remove{
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 5px 9px;
+  cursor: pointer;
+  color: var(--red);
+  font-size: 12px;
+}
+@media (max-width: 700px){
+  .portfolio-table__row{ grid-template-columns: 1fr 1fr; grid-template-areas: "name name" "maliyet adet" "deger pnl" "remove remove"; }
+  .portfolio-table__row--head{ display: none; }
+}
+
+/* ---------- ABD Portföyü (bağımsız bölüm) ---------- */
+.us-portfolio-view .panel{ max-width: 900px; margin-left: auto; margin-right: auto; }
+.us-portfolio-table{ display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.us-portfolio-row{
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  padding: 10px 12px;
+}
+.us-portfolio-row__main{
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.7fr 1fr 1fr 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.us-portfolio-row__main input{
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text);
+}
+.us-portfolio-row__changes{
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+.us-portfolio-row__changes b{ font-family: var(--font-mono); }
+.us-portfolio-row__remove{
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 5px 9px;
+  cursor: pointer;
+  color: var(--red);
+  font-size: 12px;
+}
+@media (max-width: 760px){
+  .us-portfolio-row__main{ grid-template-columns: 1fr 1fr; }
+}

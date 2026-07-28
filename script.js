@@ -9,6 +9,7 @@ const fmt1 = (v) => (Number.isFinite(v) ? v.toFixed(1) : '—');
 const fmtPct = (v) => (Number.isFinite(v) ? (v > 0 ? '+' : '') + v.toFixed(1) + '%' : '—');
 const fmtMoney = (v) => (Number.isFinite(v) ? v.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : '—');
 const fmtMn = (v) => (Number.isFinite(v) ? v.toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' mn ₺' : '—');
+const fmtUsd = (v) => (Number.isFinite(v) ? '$' + v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—');
 
 /* Özet Mali Tablolar satırı: Bu/Önceki pill'lerini ve değişim % rozetini doldurur. */
 function renderFinRow(prefix, buVal, oncekiVal) {
@@ -36,6 +37,7 @@ let state = {
   kapDraft: [],       // KAP etki kayıtları taslağı (form düzenlenirken)
   kapRaporDraft: [],  // KAP faaliyet raporu linkleri taslağı
   financialsDraft: [],  // Mali Dönem Verileri (sınırsız dönem) taslağı
+  usStocks: [],  // ABD Portföyü — bağımsız hisse listesi
   benchmark: {}       // { bist100Baslangic, bist100Guncel }
 };
 
@@ -60,6 +62,12 @@ function rvSettingsRef() {
     return rvDb.collection('users').doc(rvCurrentUser.uid).collection('settings').doc('genel');
   }
   return rvCreateLocalDoc('radyvora_demo_settings');
+}
+function rvUsStocksRef() {
+  if (!RV_DEMO_MODE && rvDb && rvCurrentUser && rvCurrentUser.uid !== 'tek-kullanici') {
+    return rvDb.collection('users').doc(rvCurrentUser.uid).collection('usStocks');
+  }
+  return rvCreateLocalCollection('radyvora_demo_us_stocks');
 }
 
 function rvStartListening() {
@@ -127,13 +135,41 @@ function rvStopListening() {
   if (els.pfEmptyNote) renderPortfolioSummary();
 }
 
+/* ================================================================
+   ABD PORTFÖYÜ — Dr. Uzman analizinden bağımsız, sade bir portföy/
+   fiyat takip bölümü. Kendi Firestore koleksiyonunu (usStocks) kullanır.
+================================================================ */
+let rvUsStocksUnsub = null;
+
+function rvStartListeningUsStocks() {
+  const ref = rvUsStocksRef();
+  if (!ref) return;
+  if (rvUsStocksUnsub) rvUsStocksUnsub();
+  rvUsStocksUnsub = ref.onSnapshot(
+    (snapshot) => {
+      state.usStocks = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      rvAutoSnapshotMonthlyUs();
+      rvAutoSnapshotDailyUs();
+      renderUsPortfolioView();
+    },
+    (err) => console.error('RADYVORA: ABD Portföyü okunamadı', err)
+  );
+}
+function rvStopListeningUsStocks() {
+  if (rvUsStocksUnsub) { rvUsStocksUnsub(); rvUsStocksUnsub = null; }
+  state.usStocks = [];
+  renderUsPortfolioView();
+}
+
 window.rvOnAuthReady = function () {
   if (!els.companyList) cacheEls();
   rvStartListening();
+  rvStartListeningUsStocks();
 };
 window.rvOnAuthClear = function () {
   if (!els.companyList) cacheEls();
   rvStopListening();
+  rvStopListeningUsStocks();
 };
 
 /* ================================================================
@@ -477,6 +513,20 @@ function rvAutoSnapshotMonthly() {
   });
 }
 
+function rvAutoSnapshotMonthlyUs() {
+  const monthKey = currentMonthKey();
+  const ref = rvUsStocksRef();
+  if (!ref) return;
+  state.usStocks.forEach((s) => {
+    if (!Number.isFinite(s.guncelFiyat)) return;
+    const hist = Array.isArray(s.aylikGecmis) ? s.aylikGecmis : [];
+    const last = hist[hist.length - 1];
+    if (last && last.ay === monthKey) return;
+    const updated = hist.concat([{ ay: monthKey, fiyat: s.guncelFiyat }]);
+    ref.doc(s.id).set({ aylikGecmis: updated }, { merge: true }).catch(() => {});
+  });
+}
+
 /* ================================================================
    GÜNLÜK / AYLIK / YILLIK / 3 YILLIK FİYAT DEĞİŞİMİ
    Günlük: siteyi açtığın her yeni günde c.gunlukGecmis dizisine
@@ -503,6 +553,19 @@ function rvAutoSnapshotDaily() {
     ref.doc(c.id).set({ gunlukGecmis: updated }, { merge: true }).catch(() => {});
   });
 }
+function rvAutoSnapshotDailyUs() {
+  const today = todayKey();
+  const ref = rvUsStocksRef();
+  if (!ref) return;
+  state.usStocks.forEach((s) => {
+    if (!Number.isFinite(s.guncelFiyat)) return;
+    const hist = Array.isArray(s.gunlukGecmis) ? s.gunlukGecmis : [];
+    const last = hist[hist.length - 1];
+    if (last && last.tarih === today) return;
+    const updated = hist.concat([{ tarih: today, fiyat: s.guncelFiyat }]);
+    ref.doc(s.id).set({ gunlukGecmis: updated }, { merge: true }).catch(() => {});
+  });
+}
 
 function monthsAgoKey(n) {
   const d = new Date();
@@ -511,7 +574,7 @@ function monthsAgoKey(n) {
 }
 
 function computePriceChanges(c) {
-  const out = { gunluk: null, aylik: null, yillik: null, ucYillik: null };
+  const out = { gunluk: null, aylik: null, yillik: null, ucYillik: null, besYillik: null };
   if (!Number.isFinite(c.guncelFiyat)) return out;
 
   const daily = Array.isArray(c.gunlukGecmis) ? c.gunlukGecmis.slice().sort((a, b) => a.tarih.localeCompare(b.tarih)) : [];
@@ -535,6 +598,8 @@ function computePriceChanges(c) {
     if (m12 && Number.isFinite(m12.fiyat) && m12.fiyat !== 0) out.yillik = ((c.guncelFiyat / m12.fiyat) - 1) * 100;
     const m36 = findClosest(monthsAgoKey(36));
     if (m36 && Number.isFinite(m36.fiyat) && m36.fiyat !== 0) out.ucYillik = ((c.guncelFiyat / m36.fiyat) - 1) * 100;
+    const m60 = findClosest(monthsAgoKey(60));
+    if (m60 && Number.isFinite(m60.fiyat) && m60.fiyat !== 0) out.besYillik = ((c.guncelFiyat / m60.fiyat) - 1) * 100;
   }
   return out;
 }
@@ -566,7 +631,8 @@ function computePortfolioDaily(rows) {
   }).filter(Boolean);
 }
 
-function drawDailyChart(canvas, points) {
+function drawDailyChart(canvas, points, fmt) {
+  fmt = fmt || fmtMn;
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0, 0, w, h);
@@ -587,8 +653,8 @@ function drawDailyChart(canvas, points) {
   ctx.fillStyle = '#67718A';
   ctx.font = '10px ui-monospace, monospace';
   ctx.textAlign = 'right';
-  ctx.fillText(fmtMn(maxV), padL - 6, padT + 8);
-  ctx.fillText(fmtMn(minV), padL - 6, padT + plotH);
+  ctx.fillText(fmt(maxV), padL - 6, padT + 8);
+  ctx.fillText(fmt(minV), padL - 6, padT + plotH);
 
   const labelStep = Math.max(1, Math.ceil(points.length / 6));
   ctx.textAlign = 'center';
@@ -628,7 +694,8 @@ function computePortfolioYearly(rows) {
   }).filter(Boolean);
 }
 
-function drawYearlyChart(canvas, points) {
+function drawYearlyChart(canvas, points, fmt) {
+  fmt = fmt || fmtMn;
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0, 0, w, h);
@@ -645,7 +712,7 @@ function drawYearlyChart(canvas, points) {
   ctx.fillStyle = '#67718A';
   ctx.font = '10px ui-monospace, monospace';
   ctx.textAlign = 'right';
-  ctx.fillText(fmtMn(maxV), padL - 6, padT + 8);
+  ctx.fillText(fmt(maxV), padL - 6, padT + 8);
   ctx.fillText('0', padL - 6, padT + plotH);
 
   points.forEach((p, i) => {
@@ -1186,6 +1253,7 @@ function cacheEls() {
     'chgGunluk', 'chgAylik', 'chgYillik', 'chg3Yillik',
     'yearlyPanel', 'yearlyCanvas', 'yearlyEmptyNote',
     'dailyPanel', 'dailyCanvas', 'dailyEmptyNote',
+    'portfolioTable',
     'pfBestWorstPanel', 'pfBest', 'pfWorst',
     'financialsPanel',
     'finSatisBu', 'finSatisOnceki', 'finBrutKarBu', 'finBrutKarOnceki', 'finFavokBu', 'finFavokOnceki',
@@ -1203,6 +1271,8 @@ function cacheEls() {
     'dashboardTabsNav',
     'mainWorkspace',
     'settingsNavBtn', 'settingsView', 'settingsBackBtn', 'settingsUserEmail', 'settingsLogoutBtn',
+    'usPortfolioNavBtn', 'usPortfolioView', 'usPortfolioBackBtn', 'usTotalCost', 'usTotalValue', 'usPnl',
+    'usAddStockBtn', 'usPortfolioTable', 'usEmptyNote', 'usDailyCanvas', 'usDailyEmptyNote', 'usYearlyCanvas', 'usYearlyEmptyNote',
     'alarmCompanySelect', 'alarmPriceInput', 'alarmDirectionSelect', 'alarmAddBtn', 'alarmList', 'alarmEmptyNote',
     'aiFileInput', 'aiExtractBtn', 'aiExtractStatus'
   ].forEach(id => { els[id] = document.getElementById(id); });
@@ -1516,6 +1586,7 @@ function renderSectorComparison(c) {
 ================================================================ */
 function showSettingsView() {
   if (els.mainWorkspace) els.mainWorkspace.hidden = true;
+  if (els.usPortfolioView) els.usPortfolioView.hidden = true;
   if (els.settingsView) els.settingsView.hidden = false;
   if (els.settingsUserEmail && typeof rvCurrentUser !== 'undefined' && rvCurrentUser) {
     els.settingsUserEmail.textContent = rvCurrentUser.email || '—';
@@ -1526,6 +1597,113 @@ function showSettingsView() {
 function hideSettingsView() {
   if (els.mainWorkspace) els.mainWorkspace.hidden = false;
   if (els.settingsView) els.settingsView.hidden = true;
+}
+
+function showUsPortfolioView() {
+  if (els.mainWorkspace) els.mainWorkspace.hidden = true;
+  if (els.settingsView) els.settingsView.hidden = true;
+  if (els.usPortfolioView) els.usPortfolioView.hidden = false;
+  renderUsPortfolioView();
+}
+function hideUsPortfolioView() {
+  if (els.mainWorkspace) els.mainWorkspace.hidden = false;
+  if (els.usPortfolioView) els.usPortfolioView.hidden = true;
+}
+
+/* ---------------- ABD Portföyü — render & işlemler ---------------- */
+function renderUsPortfolioView() {
+  if (!els.usPortfolioTable) return;
+
+  const rows = state.usStocks
+    .map(s => ({
+      c: s,
+      val: (Number.isFinite(s.guncelFiyat) && Number.isFinite(s.adet)) ? s.guncelFiyat * s.adet : null,
+      cost: (Number.isFinite(s.maliyetFiyati) && Number.isFinite(s.adet)) ? s.maliyetFiyati * s.adet : null
+    }));
+
+  const withPosition = rows.filter(r => r.val !== null && r.cost !== null);
+  const totalCost = withPosition.reduce((sum, r) => sum + r.cost, 0);
+  const totalValue = withPosition.reduce((sum, r) => sum + r.val, 0);
+  els.usTotalCost.textContent = withPosition.length ? fmtUsd(totalCost) : '—';
+  els.usTotalValue.textContent = withPosition.length ? fmtUsd(totalValue) : '—';
+  if (withPosition.length && totalCost !== 0) {
+    const pnlPct = ((totalValue - totalCost) / totalCost) * 100;
+    els.usPnl.textContent = fmtUsd(totalValue - totalCost) + ' (' + fmtPct(pnlPct) + ')';
+    els.usPnl.style.color = pnlPct >= 0 ? 'var(--green)' : 'var(--red)';
+  } else {
+    els.usPnl.textContent = '—'; els.usPnl.style.color = '';
+  }
+
+  els.usEmptyNote.hidden = state.usStocks.length > 0;
+  els.usPortfolioTable.innerHTML = state.usStocks.map((s) => {
+    const val = (Number.isFinite(s.guncelFiyat) && Number.isFinite(s.adet)) ? s.guncelFiyat * s.adet : null;
+    const cost = (Number.isFinite(s.maliyetFiyati) && Number.isFinite(s.adet)) ? s.maliyetFiyati * s.adet : null;
+    const pnl = (val !== null && cost !== null && cost !== 0) ? ((val - cost) / cost) * 100 : null;
+    const pch = computePriceChanges(s);
+    const chgHtml = (label, v) => `<span>${label} <b style="color:${Number.isFinite(v) ? (v >= 0 ? 'var(--green)' : 'var(--red)') : 'inherit'}">${Number.isFinite(v) ? fmtPct(v) : '—'}</b></span>`;
+    return `
+      <div class="us-portfolio-row" data-id="${escapeAttr(s.id)}">
+        <div class="us-portfolio-row__main">
+          <input type="text" placeholder="Şirket / Ad" value="${escapeAttr(s.name || '')}" data-field="name">
+          <input type="text" placeholder="Ticker (örn. AAPL)" value="${escapeAttr(s.ticker || '')}" data-field="ticker">
+          <input type="number" step="any" placeholder="Güncel $" value="${s.guncelFiyat ?? ''}" data-field="guncelFiyat">
+          <input type="number" step="any" placeholder="Maliyet $" value="${s.maliyetFiyati ?? ''}" data-field="maliyetFiyati">
+          <input type="number" step="any" min="0" placeholder="Adet" value="${s.adet ?? ''}" data-field="adet">
+          <span style="color:${Number.isFinite(pnl) ? (pnl >= 0 ? 'var(--green)' : 'var(--red)') : ''}">${val !== null ? fmtUsd(val) : '—'}${Number.isFinite(pnl) ? ' (' + fmtPct(pnl) + ')' : ''}</span>
+          <button type="button" class="us-portfolio-row__remove" data-remove-id="${escapeAttr(s.id)}">Sil</button>
+        </div>
+        <div class="us-portfolio-row__changes">
+          ${chgHtml('Günlük', pch.gunluk)} ${chgHtml('Aylık', pch.aylik)} ${chgHtml('Yıllık', pch.yillik)} ${chgHtml('3 Yıllık', pch.ucYillik)} ${chgHtml('5 Yıllık', pch.besYillik)}
+        </div>
+      </div>`;
+  }).join('');
+
+  const dailyRows = state.usStocks.map(s => ({ c: s }));
+  const dailyPoints = computePortfolioDaily(dailyRows);
+  if (dailyPoints.length >= 2) {
+    els.usDailyEmptyNote.hidden = true;
+    els.usDailyCanvas.hidden = false;
+    drawDailyChart(els.usDailyCanvas, dailyPoints, fmtUsd);
+  } else {
+    els.usDailyEmptyNote.hidden = false;
+    els.usDailyCanvas.hidden = true;
+  }
+
+  const yearlyPoints = computePortfolioYearly(dailyRows);
+  if (yearlyPoints.length >= 2) {
+    els.usYearlyEmptyNote.hidden = true;
+    els.usYearlyCanvas.hidden = false;
+    drawYearlyChart(els.usYearlyCanvas, yearlyPoints, fmtUsd);
+  } else {
+    els.usYearlyEmptyNote.hidden = false;
+    els.usYearlyCanvas.hidden = true;
+  }
+}
+
+function handleAddUsStock() {
+  const ref = rvUsStocksRef();
+  if (!ref) return;
+  ref.doc('us_' + Date.now()).set({ name: '', ticker: '', maliyetFiyati: null, adet: null, guncelFiyat: null }).catch((err) => alert('Eklenemedi: ' + err.message));
+}
+
+function handleUsPortfolioTableChange(e) {
+  const row = e.target.closest('.us-portfolio-row');
+  if (!row || !row.dataset.id) return;
+  const field = e.target.dataset.field;
+  if (!field) return;
+  const ref = rvUsStocksRef();
+  if (!ref) return;
+  const v = (field === 'name' || field === 'ticker') ? e.target.value : (e.target.value === '' ? null : parseFloat(e.target.value));
+  ref.doc(row.dataset.id).set({ [field]: v }, { merge: true }).catch((err) => alert('Kaydedilemedi: ' + err.message));
+}
+
+function handleUsPortfolioTableRemove(e) {
+  const btn = e.target.closest('[data-remove-id]');
+  if (!btn) return;
+  const ref = rvUsStocksRef();
+  if (!ref) return;
+  if (!confirm('Bu hisseyi tamamen silmek istediğine emin misin?')) return;
+  ref.doc(btn.dataset.removeId).delete().catch((err) => alert('Silinemedi: ' + err.message));
 }
 
 /* ================================================================
@@ -1842,7 +2020,63 @@ function renderDashboard(c) {
 }
 
 /* ---------------- Render: portfolio-wide summary ---------------- */
+/* ================================================================
+   PORTFÖY TABLOSU — tüm şirketleri listeler, Maliyet/Adet doğrudan
+   buradan girilip pozisyon eklenebilir; "Kaldır" ile pozisyon
+   temizlenir (şirketin kendisi/analiz verileri silinmez).
+================================================================ */
+function renderPortfolioTable() {
+  if (!els.portfolioTable) return;
+  if (!state.companies.length) { els.portfolioTable.innerHTML = ''; return; }
+
+  const headRow = `
+    <div class="portfolio-table__row portfolio-table__row--head">
+      <span>Şirket</span><span>Maliyet Fiyatı</span><span>Adet</span><span>Güncel Değer</span><span>Kâr/Zarar</span><span></span>
+    </div>`;
+
+  const rows = state.companies.map((c) => {
+    const val = positionValue(c);
+    const cost = costValue(c);
+    const hasPosition = val !== null && cost !== null;
+    const pnl = hasPosition && cost !== 0 ? ((val - cost) / cost) * 100 : null;
+    const pnlColor = Number.isFinite(pnl) ? (pnl >= 0 ? 'var(--green)' : 'var(--red)') : '';
+    return `
+      <div class="portfolio-table__row" data-id="${escapeAttr(c.id)}">
+        <span class="portfolio-table__name">${escapeHtml(c.name)} (${escapeHtml(c.ticker)})</span>
+        <input type="number" step="any" placeholder="Maliyet ₺" value="${c.maliyetFiyati ?? ''}" data-field="maliyetFiyati">
+        <input type="number" step="any" min="0" placeholder="Adet" value="${c.adet ?? ''}" data-field="adet">
+        <span>${hasPosition ? fmtMn(val) : '—'}</span>
+        <span style="color:${pnlColor}">${Number.isFinite(pnl) ? fmtPct(pnl) : '—'}</span>
+        <button type="button" class="portfolio-table__remove" data-remove-id="${escapeAttr(c.id)}" ${hasPosition ? '' : 'hidden'}>Kaldır</button>
+      </div>`;
+  }).join('');
+
+  els.portfolioTable.innerHTML = headRow + rows;
+}
+
+function handlePortfolioTableChange(e) {
+  const row = e.target.closest('.portfolio-table__row');
+  if (!row || !row.dataset.id) return;
+  const field = e.target.dataset.field;
+  if (!field) return;
+  const v = e.target.value === '' ? null : parseFloat(e.target.value);
+  const ref = rvCompaniesRef();
+  if (!ref) return;
+  ref.doc(row.dataset.id).set({ [field]: v }, { merge: true }).catch((err) => alert('Kaydedilemedi: ' + err.message));
+}
+
+function handlePortfolioTableRemove(e) {
+  const btn = e.target.closest('[data-remove-id]');
+  if (!btn) return;
+  const ref = rvCompaniesRef();
+  if (!ref) return;
+  if (!confirm('Bu pozisyonu kaldırmak istediğine emin misin? (Şirketin kendisi ve analiz verileri silinmez.)')) return;
+  ref.doc(btn.dataset.removeId).set({ maliyetFiyati: null, adet: null }, { merge: true }).catch((err) => alert('Kaldırılamadı: ' + err.message));
+}
+
 function renderPortfolioSummary() {
+  renderPortfolioTable();
+
   const rows = state.companies
     .map(c => ({ c, val: positionValue(c), cost: costValue(c) }))
     .filter(r => r.val !== null && r.cost !== null);
@@ -2099,6 +2333,10 @@ function init() {
     els.benchmarkForm.hidden = !els.benchmarkForm.hidden;
   });
   els.saveBenchmarkBtn.addEventListener('click', handleSaveBenchmark);
+  if (els.portfolioTable) {
+    els.portfolioTable.addEventListener('change', handlePortfolioTableChange);
+    els.portfolioTable.addEventListener('click', handlePortfolioTableRemove);
+  }
 
   els.refreshDovizBtn.addEventListener('click', rvFetchDovizKurlari);
   els.saveMacroBtn.addEventListener('click', handleSaveMacro);
@@ -2165,6 +2403,20 @@ function init() {
     els.settingsLogoutBtn.addEventListener('click', () => {
       if (els.logoutBtn) els.logoutBtn.click();
     });
+  }
+
+  /* ABD Portföyü (bağımsız bölüm) */
+  if (els.usPortfolioNavBtn) {
+    els.usPortfolioNavBtn.addEventListener('click', () => {
+      showUsPortfolioView();
+      if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
+    });
+  }
+  if (els.usPortfolioBackBtn) els.usPortfolioBackBtn.addEventListener('click', hideUsPortfolioView);
+  if (els.usAddStockBtn) els.usAddStockBtn.addEventListener('click', handleAddUsStock);
+  if (els.usPortfolioTable) {
+    els.usPortfolioTable.addEventListener('change', handleUsPortfolioTableChange);
+    els.usPortfolioTable.addEventListener('click', handleUsPortfolioTableRemove);
   }
   if (els.alarmAddBtn) els.alarmAddBtn.addEventListener('click', handleAddAlarm);
   if (els.alarmList) {
