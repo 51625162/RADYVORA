@@ -70,8 +70,11 @@
     </ul>
   </nav>
 
-  <nav class="section-nav settings-nav" aria-label="Ayarlar">
+  <nav class="section-nav settings-nav" aria-label="Görünümler">
     <ul class="section-nav-list">
+      <li><button type="button" id="analysisNavBtn" class="section-nav-link">📊 Dr. Uzman</button></li>
+      <li><button type="button" id="portfolioNavBtn" class="section-nav-link">💼 Portföy Özeti</button></li>
+      <li><button type="button" id="macroNavBtn" class="section-nav-link">📡 Ekonomik Radar</button></li>
       <li><button type="button" id="usPortfolioNavBtn" class="section-nav-link">🇺🇸 ABD Portföyü</button></li>
       <li><button type="button" id="settingsNavBtn" class="section-nav-link">⚙ Ayarlar</button></li>
     </ul>
@@ -97,7 +100,11 @@
   </div>
 </header>
 
-<section class="portfolio-summary" aria-label="Portföy Özeti">
+<section id="portfolioView" class="settings-view portfolio-summary" hidden aria-label="Portföy Özeti">
+  <div class="view-header">
+    <h2>💼 Portföy Özeti</h2>
+    <button type="button" id="portfolioBackBtn" class="btn btn--ghost">← Geri</button>
+  </div>
   <div class="panel">
     <div class="panel__head">
       <h2>Portföy Özeti</h2>
@@ -187,7 +194,11 @@
   </div>
 </section>
 
-<section class="macro-radar" aria-label="Ekonomik Radar">
+<section id="macroView" class="settings-view macro-radar" hidden aria-label="Ekonomik Radar">
+  <div class="view-header">
+    <h2>📡 Ekonomik Radar</h2>
+    <button type="button" id="macroBackBtn" class="btn btn--ghost">← Geri</button>
+  </div>
   <div class="panel">
     <div class="panel__head">
       <h2>Ekonomik Radar</h2>
@@ -411,7 +422,14 @@
   </section>
 
   <!-- RIGHT: Dr. Uzman dashboard -->
-  <section class="dashboard-col" aria-label="Dr. Uzman analizi">
+
+</main>
+
+  <section id="analysisView" class="settings-view analysis-view" hidden>
+    <div class="view-header">
+      <h2>📊 Dr. Uzman</h2>
+      <button type="button" id="analysisBackBtn" class="btn btn--ghost">← Geri</button>
+    </div>
 
     <div id="dashboardEmpty" class="panel empty-state">
       <p>☰ ile Şirket Defteri'ni açıp bir şirket seçin, ya da yeni şirket ekleyip verilerini girin.</p>
@@ -629,14 +647,12 @@
     </div>
     </section>
 
-</main>
-
 <section id="usPortfolioView" class="settings-view us-portfolio-view" hidden>
+  <div class="view-header">
+    <h2>🇺🇸 ABD Portföyü</h2>
+    <button type="button" id="usPortfolioBackBtn" class="btn btn--ghost">← Geri</button>
+  </div>
   <div class="panel">
-    <div class="panel__head">
-      <h2>🇺🇸 ABD Portföyü</h2>
-      <button type="button" id="usPortfolioBackBtn" class="btn btn--ghost">← Geri</button>
-    </div>
     <p class="hint">RADYVORA'nın BIST analiz motorundan (Dr. Uzman) bağımsız, sade bir ABD hissesi portföy/fiyat takip bölümü. Al/sat tavsiyesi vermez.</p>
 
     <div class="portfolio-cards">
@@ -673,12 +689,11 @@
 </section>
 
 <section id="settingsView" class="settings-view" hidden>
+  <div class="view-header">
+    <h2>⚙ Ayarlar</h2>
+    <button type="button" id="settingsBackBtn" class="btn btn--ghost">← Geri</button>
+  </div>
   <div class="panel">
-    <div class="panel__head">
-      <h2>Ayarlar</h2>
-      <button type="button" id="settingsBackBtn" class="btn btn--ghost">← Geri</button>
-    </div>
-
     <h3 class="panel-title">Hesap</h3>
     <p class="hint">Giriş yapılan hesap: <strong id="settingsUserEmail">—</strong></p>
     <button type="button" id="settingsLogoutBtn" class="btn btn--ghost btn--danger">Çıkış Yap</button>

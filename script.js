@@ -1271,6 +1271,9 @@ function cacheEls() {
     'dashboardTabsNav',
     'mainWorkspace',
     'settingsNavBtn', 'settingsView', 'settingsBackBtn', 'settingsUserEmail', 'settingsLogoutBtn',
+    'analysisView', 'analysisNavBtn', 'analysisBackBtn',
+    'portfolioView', 'portfolioNavBtn', 'portfolioBackBtn',
+    'macroView', 'macroNavBtn', 'macroBackBtn',
     'usPortfolioNavBtn', 'usPortfolioView', 'usPortfolioBackBtn', 'usTotalCost', 'usTotalValue', 'usPnl',
     'usAddStockBtn', 'usPortfolioTable', 'usEmptyNote', 'usDailyCanvas', 'usDailyEmptyNote', 'usYearlyCanvas', 'usYearlyEmptyNote',
     'alarmCompanySelect', 'alarmPriceInput', 'alarmDirectionSelect', 'alarmAddBtn', 'alarmList', 'alarmEmptyNote',
@@ -1584,31 +1587,35 @@ function renderSectorComparison(c) {
 /* ================================================================
    AYARLAR GÖRÜNÜMÜ
 ================================================================ */
-function showSettingsView() {
-  if (els.mainWorkspace) els.mainWorkspace.hidden = true;
-  if (els.usPortfolioView) els.usPortfolioView.hidden = true;
-  if (els.settingsView) els.settingsView.hidden = false;
-  if (els.settingsUserEmail && typeof rvCurrentUser !== 'undefined' && rvCurrentUser) {
-    els.settingsUserEmail.textContent = rvCurrentUser.email || '—';
+/* ================================================================
+   BİRLEŞİK GÖRÜNÜM SİSTEMİ — sol menüden tıklanan her bölüm
+   (Dr. Uzman, Portföy Özeti, Ekonomik Radar, ABD Portföyü, Ayarlar)
+   kendi tam ekranında açılır, aynı anda sadece biri görünür.
+================================================================ */
+const RV_VIEW_IDS = ['mainWorkspace', 'analysisView', 'portfolioView', 'macroView', 'usPortfolioView', 'settingsView'];
+
+function rvShowView(name) {
+  RV_VIEW_IDS.forEach((id) => { if (els[id]) els[id].hidden = (id !== name); });
+
+  if (name === 'analysisView') {
+    const c = state.companies.find(x => x.id === state.activeId) || null;
+    renderDashboard(c);
   }
-  renderAlarmCompanySelect();
-  renderAlarmList();
-}
-function hideSettingsView() {
-  if (els.mainWorkspace) els.mainWorkspace.hidden = false;
-  if (els.settingsView) els.settingsView.hidden = true;
+  if (name === 'portfolioView') renderPortfolioSummary();
+  if (name === 'usPortfolioView') renderUsPortfolioView();
+  if (name === 'settingsView') {
+    if (els.settingsUserEmail && typeof rvCurrentUser !== 'undefined' && rvCurrentUser) {
+      els.settingsUserEmail.textContent = rvCurrentUser.email || '—';
+    }
+    renderAlarmCompanySelect();
+    renderAlarmList();
+  }
+
+  const appShell = document.getElementById('appShell');
+  if (appShell && window.innerWidth <= 880) appShell.classList.remove('sidebar-open');
 }
 
-function showUsPortfolioView() {
-  if (els.mainWorkspace) els.mainWorkspace.hidden = true;
-  if (els.settingsView) els.settingsView.hidden = true;
-  if (els.usPortfolioView) els.usPortfolioView.hidden = false;
-  renderUsPortfolioView();
-}
-function hideUsPortfolioView() {
-  if (els.mainWorkspace) els.mainWorkspace.hidden = false;
-  if (els.usPortfolioView) els.usPortfolioView.hidden = true;
-}
+function ensureMainWorkspaceVisible() { rvShowView('mainWorkspace'); }
 
 /* ---------------- ABD Portföyü — render & işlemler ---------------- */
 function renderUsPortfolioView() {
@@ -2031,7 +2038,7 @@ function renderPortfolioTable() {
 
   const headRow = `
     <div class="portfolio-table__row portfolio-table__row--head">
-      <span>Şirket</span><span>Maliyet Fiyatı</span><span>Adet</span><span>Güncel Değer</span><span>Kâr/Zarar</span><span></span>
+      <span>Şirket</span><span>Maliyet Fiyatı</span><span>Adet</span><span>Güncel Fiyat</span><span>Değer / Kâr-Zarar</span><span></span>
     </div>`;
 
   const rows = state.companies.map((c) => {
@@ -2045,8 +2052,8 @@ function renderPortfolioTable() {
         <span class="portfolio-table__name">${escapeHtml(c.name)} (${escapeHtml(c.ticker)})</span>
         <input type="number" step="any" placeholder="Maliyet ₺" value="${c.maliyetFiyati ?? ''}" data-field="maliyetFiyati">
         <input type="number" step="any" min="0" placeholder="Adet" value="${c.adet ?? ''}" data-field="adet">
-        <span>${hasPosition ? fmtMn(val) : '—'}</span>
-        <span style="color:${pnlColor}">${Number.isFinite(pnl) ? fmtPct(pnl) : '—'}</span>
+        <input type="number" step="any" placeholder="Güncel Fiyat ₺" value="${c.guncelFiyat ?? ''}" data-field="guncelFiyat">
+        <span style="color:${pnlColor}">${hasPosition ? fmtMn(val) : '—'}${Number.isFinite(pnl) ? ' (' + fmtPct(pnl) + ')' : ''}</span>
         <button type="button" class="portfolio-table__remove" data-remove-id="${escapeAttr(c.id)}" ${hasPosition ? '' : 'hidden'}>Kaldır</button>
       </div>`;
   }).join('');
@@ -2245,11 +2252,6 @@ function rvSyncSectionNav() {
 }
 
 /* ---------------- Actions ---------------- */
-function ensureMainWorkspaceVisible() {
-  if (els.settingsView && !els.settingsView.hidden) hideSettingsView();
-  if (els.usPortfolioView && !els.usPortfolioView.hidden) hideUsPortfolioView();
-}
-
 function selectCompany(id) {
   ensureMainWorkspaceVisible();
   state.activeId = id;
@@ -2398,28 +2400,26 @@ function init() {
     });
   }
 
-  /* Ayarlar görünümü (fiyat alarmları + hesap) */
-  if (els.settingsNavBtn) {
-    els.settingsNavBtn.addEventListener('click', () => {
-      showSettingsView();
-      if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
-    });
-  }
-  if (els.settingsBackBtn) els.settingsBackBtn.addEventListener('click', hideSettingsView);
+  /* Sol menüdeki bağımsız görünümler — hepsi tek sistemle (rvShowView) çalışır */
+  if (els.analysisNavBtn) els.analysisNavBtn.addEventListener('click', () => rvShowView('analysisView'));
+  if (els.analysisBackBtn) els.analysisBackBtn.addEventListener('click', () => rvShowView('mainWorkspace'));
+
+  if (els.portfolioNavBtn) els.portfolioNavBtn.addEventListener('click', () => rvShowView('portfolioView'));
+  if (els.portfolioBackBtn) els.portfolioBackBtn.addEventListener('click', () => rvShowView('mainWorkspace'));
+
+  if (els.macroNavBtn) els.macroNavBtn.addEventListener('click', () => rvShowView('macroView'));
+  if (els.macroBackBtn) els.macroBackBtn.addEventListener('click', () => rvShowView('mainWorkspace'));
+
+  if (els.settingsNavBtn) els.settingsNavBtn.addEventListener('click', () => rvShowView('settingsView'));
+  if (els.settingsBackBtn) els.settingsBackBtn.addEventListener('click', () => rvShowView('mainWorkspace'));
   if (els.settingsLogoutBtn) {
     els.settingsLogoutBtn.addEventListener('click', () => {
       if (els.logoutBtn) els.logoutBtn.click();
     });
   }
 
-  /* ABD Portföyü (bağımsız bölüm) */
-  if (els.usPortfolioNavBtn) {
-    els.usPortfolioNavBtn.addEventListener('click', () => {
-      showUsPortfolioView();
-      if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
-    });
-  }
-  if (els.usPortfolioBackBtn) els.usPortfolioBackBtn.addEventListener('click', hideUsPortfolioView);
+  if (els.usPortfolioNavBtn) els.usPortfolioNavBtn.addEventListener('click', () => rvShowView('usPortfolioView'));
+  if (els.usPortfolioBackBtn) els.usPortfolioBackBtn.addEventListener('click', () => rvShowView('mainWorkspace'));
   if (els.usAddStockBtn) els.usAddStockBtn.addEventListener('click', handleAddUsStock);
   if (els.usPortfolioTable) {
     els.usPortfolioTable.addEventListener('change', handleUsPortfolioTableChange);
