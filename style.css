@@ -1398,3 +1398,25 @@ input::placeholder, textarea::placeholder{ color: #A6AEC2; }
 @media (max-width: 760px){
   .us-portfolio-row__main{ grid-template-columns: 1fr 1fr; }
 }
+
+/* ---------- Son 5 Dönem — Ayrıntılı Görünüm ---------- */
+.fin-history-scroll{ overflow-x: auto; }
+.fin-history-table{ display: table; width: 100%; border-collapse: collapse; margin-bottom: 4px; min-width: 480px; }
+.fin-history-row{ display: table-row; }
+.fin-history-row > span{
+  display: table-cell;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+}
+.fin-history-row--head > span{
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--line);
+}
+.fin-history-row > span:first-child{ text-align: left; color: var(--text-dim); }
+.fin-history-row > span:not(:first-child){ text-align: right; font-family: var(--font-mono); }

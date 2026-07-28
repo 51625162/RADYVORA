@@ -566,6 +566,19 @@
 
       <div class="tab-pane" data-tab="mali">
 
+        <div class="panel" id="financialsHistoryPanel" hidden>
+          <h3 class="panel-title">Son 5 Dönem — Ayrıntılı Görünüm</h3>
+          <p class="hint">Eklediğin tüm dönemlerden en son 5 tanesi, en yeni solda. Kaydırarak (mobilde yatay) tüm dönemleri görebilirsin.</p>
+          <div class="fin-history-scroll">
+            <h4 class="fin-summary-col__title">Gelir Tablosu</h4>
+            <div id="finHistGelir" class="fin-history-table"></div>
+            <h4 class="fin-summary-col__title" style="margin-top:16px;">Bilanço</h4>
+            <div id="finHistBilanco" class="fin-history-table"></div>
+            <h4 class="fin-summary-col__title" style="margin-top:16px;">Nakit Akış Tablosu</h4>
+            <div id="finHistNakit" class="fin-history-table"></div>
+          </div>
+        </div>
+
         <div class="panel financials-panel" id="financialsPanel" hidden>
           <h3 class="panel-title">Özet Mali Tablolar — <span id="finPeriodLabelA">Dönem A</span> vs <span id="finPeriodLabelB">Dönem B</span></h3>
 
