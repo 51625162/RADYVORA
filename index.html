@@ -204,7 +204,7 @@
       <h2>Ekonomik Radar</h2>
       <button type="button" id="refreshDovizBtn" class="btn btn--ghost">↻ Kurları Güncelle</button>
     </div>
-    <p class="hint">🔄 işaretli olanlar otomatik çekilir (frankfurter.app, ücretsiz, anahtar gerekmez). ✍️ işaretli olanlar TCMB EVDS/TÜİK'in tarayıcıdan güvenli çekilememesi nedeniyle elle girilir.</p>
+    <p class="hint">🔄 işaretli olanlar otomatik çekilir (frankfurter.app, ücretsiz, anahtar gerekmez). ✍️ işaretli olanlar elle girilir.</p>
 
     <div class="macro-grid">
       <div class="macro-item">
@@ -218,13 +218,13 @@
         <span class="macro-value" id="macroEur">—</span>
       </div>
       <div class="macro-item">
-        <span class="macro-badge macro-badge--auto">🔄 Otomatik</span>
+        <span class="macro-badge macro-badge--manual">✍️ Manuel</span>
         <span class="macro-label">TÜFE Yıllık (%)</span>
         <input type="number" step="any" id="m_tufe" class="macro-input">
       </div>
       <div class="macro-item">
-        <span class="macro-badge macro-badge--auto">🔄 Otomatik*</span>
-        <span class="macro-label">Fonlama Maliyeti (%)</span>
+        <span class="macro-badge macro-badge--manual">✍️ Manuel</span>
+        <span class="macro-label">Politika Faizi (%)</span>
         <input type="number" step="any" id="m_faiz" class="macro-input">
       </div>
       <div class="macro-item">
@@ -240,13 +240,23 @@
     </div>
 
     <div class="macro-footer">
-      <button type="button" id="fetchEvdsBtn" class="btn btn--ghost">↻ TÜFE/Fonlama Maliyetini TCMB'den Çek</button>
       <span id="macroUpdated" class="muted-note"></span>
       <button type="button" id="saveMacroBtn" class="btn btn--primary">Manuel Verileri Kaydet</button>
     </div>
-    <p id="evdsStatus" class="muted-note"></p>
-    <p class="fair-value-note">* "Fonlama Maliyeti", TCMB'nin Ağırlıklı Ortalama Fonlama Maliyeti serisidir (TP.APIFON4) — resmi ilan edilen politika faiziyle pratikte çok yakından hareket eder ama birebir aynı seri değildir, yaklaşık bir gösterge olarak kullan. TÜFE/Fonlama çekmek için EVDS API anahtarı gerekir — bkz. EVDS-KURULUM.md.</p>
     <p id="macroError" class="login-error" hidden></p>
+
+    <div class="macro-notes-panel">
+      <h3 class="panel-title">Ek Notlar + AI Yorumu</h3>
+      <p class="hint">Bir haberden, rapordan veya başka bir kaynaktan metni buraya yapıştır — Claude bu metni yorumlayıp kısa bir analiz döndürür. Bu bir yatırım tavsiyesi değildir, sadece yapıştırdığın metnin özeti/yorumudur.</p>
+      <textarea id="macroNotesInput" class="macro-notes-input" rows="6" placeholder="Buraya yapıştır..."></textarea>
+      <div class="macro-notes-actions">
+        <button type="button" id="macroNotesSaveBtn" class="btn btn--ghost">Notu Kaydet</button>
+        <button type="button" id="macroNotesAiBtn" class="btn btn--primary">AI Yorumu Al</button>
+      </div>
+      <p id="macroNotesStatus" class="muted-note"></p>
+      <div id="macroNotesAiResult" class="macro-notes-ai-result" hidden></div>
+    </div>
+
 
     <div id="sectorSensitivityPanel" class="sector-sensitivity">
       <h3 class="panel-title">Sektör Duyarlılığı — Genel/Tarihsel Eğilim</h3>

@@ -109,6 +109,9 @@ function rvStartListening() {
         els.m_faiz.value = state.benchmark.m_faiz ?? '';
         els.m_cds.value = state.benchmark.m_cds ?? '';
         els.m_pmi.value = state.benchmark.m_pmi ?? '';
+        if (els.macroNotesInput && !els.macroNotesInput.matches(':focus')) {
+          els.macroNotesInput.value = state.benchmark.macroNotes ?? '';
+        }
         if (els.macroUpdated) {
           els.macroUpdated.textContent = state.benchmark.macroUpdatedAt
             ? `Manuel veriler son güncelleme: ${state.benchmark.macroUpdatedAt}`
@@ -204,35 +207,48 @@ async function rvFetchDovizKurlari() {
   }
 }
 
-/* TCMB EVDS üzerinden TÜFE Yıllık % ve Fonlama Maliyetini çeker.
-   Ayrı bir EVDS API anahtarı Worker'a eklenmiş olmalı (bkz. EVDS-KURULUM.md). */
-async function rvFetchEvdsMacro() {
-  if (!els.evdsStatus) return;
+/* Ek Notlar + AI Yorumu — kullanıcının yapıştırdığı serbest metni
+   Claude'a gönderip kısa bir yorum/özet aldırır. Tavsiye değildir. */
+function handleSaveMacroNotes() {
+  const ref = rvSettingsRef();
+  if (!ref || !els.macroNotesInput) return;
+  els.macroNotesStatus.textContent = 'Kaydediliyor…';
+  ref.set({ macroNotes: els.macroNotesInput.value }, { merge: true })
+    .then(() => { els.macroNotesStatus.textContent = 'Not kaydedildi.'; })
+    .catch((err) => { els.macroNotesStatus.textContent = 'Hata: ' + err.message; });
+}
+
+async function handleMacroNotesAi() {
+  if (!els.macroNotesInput || !els.macroNotesAiResult) return;
+  const text = els.macroNotesInput.value.trim();
+  if (!text) { els.macroNotesStatus.textContent = 'Önce bir metin yapıştır.'; return; }
   if (typeof rvWorkerConfigured !== 'function' || !rvWorkerConfigured()) {
-    els.evdsStatus.textContent = 'Önce ai-config.js dosyasına Cloudflare Worker adresini eklemelisin (bkz. AI-KURULUM.md).';
+    els.macroNotesStatus.textContent = 'AI yorumu için önce ai-config.js dosyasına Worker adresini eklemelisin (bkz. AI-KURULUM.md).';
     return;
   }
-  els.evdsStatus.textContent = 'TCMB EVDS\'den çekiliyor…';
-  if (els.fetchEvdsBtn) els.fetchEvdsBtn.disabled = true;
+
+  els.macroNotesStatus.textContent = 'Claude yorumluyor…';
+  els.macroNotesAiBtn.disabled = true;
+  els.macroNotesAiResult.hidden = true;
 
   try {
     const res = await fetch(RV_WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get_macro' })
+      body: JSON.stringify({ action: 'macro_note_comment', text })
     });
     const json = await res.json();
     if (!res.ok || json.error) {
-      els.evdsStatus.textContent = 'Hata: ' + (json.error || 'bilinmeyen bir sorun oluştu.');
+      els.macroNotesStatus.textContent = 'Hata: ' + (json.error || 'bilinmeyen bir sorun oluştu.');
       return;
     }
-    if (Number.isFinite(json.tufe_yillik) && els.m_tufe) els.m_tufe.value = fmt1(json.tufe_yillik);
-    if (Number.isFinite(json.faiz) && els.m_faiz) els.m_faiz.value = fmt1(json.faiz);
-    els.evdsStatus.textContent = 'Çekildi' + (json.asOf ? ' (TCMB verisi: ' + json.asOf + ')' : '') + ' — kaydetmek için "Manuel Verileri Kaydet"e bas.';
+    els.macroNotesAiResult.textContent = json.comment || '—';
+    els.macroNotesAiResult.hidden = false;
+    els.macroNotesStatus.textContent = 'Bu bir yatırım tavsiyesi değildir, yapıştırdığın metnin AI yorumudur.';
   } catch (e) {
-    els.evdsStatus.textContent = 'Hata: ' + e.message;
+    els.macroNotesStatus.textContent = 'Hata: ' + e.message;
   } finally {
-    if (els.fetchEvdsBtn) els.fetchEvdsBtn.disabled = false;
+    els.macroNotesAiBtn.disabled = false;
   }
 }
 
@@ -1247,6 +1263,7 @@ function cacheEls() {
     'portfolioHealthPanel', 'phAxisCards', 'phWeakAxes', 'phManipList',
     'refreshDovizBtn', 'macroUsd', 'macroEur', 'm_tufe', 'm_faiz', 'm_cds', 'm_pmi',
     'fetchEvdsBtn', 'evdsStatus',
+    'macroNotesInput', 'macroNotesSaveBtn', 'macroNotesAiBtn', 'macroNotesStatus', 'macroNotesAiResult',
     'macroUpdated', 'saveMacroBtn', 'macroError',
     'valuationBadge', 'valuationDetail',
     'monthlyPanel', 'monthlyCanvas', 'monthlyEmptyNote', 'monthlyManualAy', 'monthlyManualFiyat', 'monthlyManualSaveBtn',
@@ -2399,7 +2416,8 @@ function init() {
   els.refreshDovizBtn.addEventListener('click', rvFetchDovizKurlari);
   els.saveMacroBtn.addEventListener('click', handleSaveMacro);
   rvFetchDovizKurlari();
-  if (els.fetchEvdsBtn) els.fetchEvdsBtn.addEventListener('click', rvFetchEvdsMacro);
+  if (els.macroNotesSaveBtn) els.macroNotesSaveBtn.addEventListener('click', handleSaveMacroNotes);
+  if (els.macroNotesAiBtn) els.macroNotesAiBtn.addEventListener('click', handleMacroNotesAi);
 
   if (els.monthlyManualSaveBtn) els.monthlyManualSaveBtn.addEventListener('click', handleMonthlyManualSave);
   if (els.aiExtractBtn) els.aiExtractBtn.addEventListener('click', handleAiExtract);

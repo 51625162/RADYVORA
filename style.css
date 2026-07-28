@@ -1420,3 +1420,29 @@ input::placeholder, textarea::placeholder{ color: #A6AEC2; }
 }
 .fin-history-row > span:first-child{ text-align: left; color: var(--text-dim); }
 .fin-history-row > span:not(:first-child){ text-align: right; font-family: var(--font-mono); }
+
+/* ---------- Ek Notlar + AI Yorumu ---------- */
+.macro-notes-panel{ margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.macro-notes-input{
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--text);
+  resize: vertical;
+  margin-top: 8px;
+}
+.macro-notes-actions{ display: flex; gap: 8px; margin-top: 10px; }
+.macro-notes-ai-result{
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--primary-soft);
+  border: 1px solid rgba(14,159,110,0.25);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}

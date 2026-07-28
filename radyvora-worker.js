@@ -198,7 +198,56 @@ export default {
     if (body.action === 'get_macro') {
       return handleGetMacro(env);
     }
+    if (body.action === 'macro_note_comment') {
+      return handleMacroNoteComment(body, env);
+    }
 
     return new Response(JSON.stringify({ error: 'Bilinmeyen action: ' + body.action }), { status: 400, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } });
   },
 };
+
+/* ================================================================
+   EK NOTLAR + AI YORUMU — kullanıcının yapıştırdığı serbest metne
+   (haber, rapor vb.) kısa, nötr bir Claude yorumu ekler. Tavsiye
+   değildir, sadece yapıştırılan metnin özet/yorumudur.
+================================================================ */
+async function handleMacroNoteComment(body, env) {
+  const headers = { ...corsHeaders(), 'Content-Type': 'application/json' };
+  const text = (body.text || '').toString().trim();
+  if (!text) return new Response(JSON.stringify({ error: 'Metin bulunamadı.' }), { status: 400, headers });
+  if (!env.ANTHROPIC_API_KEY) return new Response(JSON.stringify({ error: 'Anthropic API anahtarı Worker\'a eklenmedi.' }), { status: 400, headers });
+
+  const systemPrompt =
+    'Sana bir kullanıcının bir haberden, rapordan veya başka bir kaynaktan yapıştırdığı bir metin verilecek. ' +
+    'Bu metni Türkçe, nötr, kısa (en fazla 4-5 cümle) bir dille yorumla/özetle: ana noktaları çıkar, varsa ' +
+    'belirsizlik veya çelişki taşıyan kısımları belirt. Kesinlikle "al", "sat", "yatırım yap" gibi bir tavsiye ' +
+    'verme — sadece metnin ne söylediğini ve dikkat edilmesi gereken noktaları açıkla. Düz metin döndür, ' +
+    'JSON veya madde işareti kullanma.';
+
+  let res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: text }]
+      })
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'Anthropic API\'ye ulaşılamadı: ' + e.message }), { status: 502, headers });
+  }
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    return new Response(JSON.stringify({ error: 'Anthropic API hatası (kod ' + res.status + '): ' + errText.slice(0, 200) }), { status: 500, headers });
+  }
+  const json = await res.json();
+  const comment = (json.content || []).map(b => b.text || '').join('\n').trim();
+  return new Response(JSON.stringify({ comment: comment || '—' }), { headers });
+}
