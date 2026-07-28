@@ -1264,6 +1264,7 @@ function cacheEls() {
     'finYatirimNakitBu', 'finYatirimNakitOnceki', 'finFinansmanNakitBu', 'finFinansmanNakitOnceki',
     'finFcfBu', 'finFcfOnceki', 'finCariOran', 'finFcfYillik',
     'finPeriodLabelA', 'finPeriodLabelB',
+    'financialsHistoryPanel', 'finHistGelir', 'finHistBilanco', 'finHistNakit',
     'sidebarToggle', 'sidebarBackdrop', 'sectionNav',
     'sectorSensitivityPanel', 'sectorSensitivityList',
     'sectorComparePanel', 'sectorCompareHint', 'sectorCompareTable',
@@ -1414,6 +1415,53 @@ const FINANCIALS_FIELDS = [
   { key: 'finansmanNakit', label: 'Finansman Nakit Akışı' },
   { key: 'donemSonuNakit', label: 'Dönem Sonu Nakit' }
 ];
+
+const FIN_HISTORY_GROUPS = {
+  gelir: [
+    { key: 'satis', label: 'Net Satışlar' },
+    { key: 'brutKar', label: 'Brüt Kâr' },
+    { key: 'favok', label: 'FAVÖK' },
+    { key: 'faaliyetKari', label: 'Faaliyet Kârı / EBİT' },
+    { key: 'netkar', label: 'Net Kâr' }
+  ],
+  bilanco: [
+    { key: 'donenVarlik', label: 'Dönen Varlıklar' },
+    { key: 'duranVarlik', label: 'Duran Varlıklar' },
+    { key: 'kvYukumluluk', label: 'KV Yükümlülükler' },
+    { key: 'uvYukumluluk', label: 'UV Yükümlülükler' },
+    { key: 'netborc', label: 'Net Borç' },
+    { key: 'ozkaynak', label: 'Özkaynaklar' }
+  ],
+  nakit: [
+    { key: 'isletmeNakit', label: 'İşletme Nakit Akışı' },
+    { key: 'yatirimNakit', label: 'Yatırım Nakit Akışı' },
+    { key: 'finansmanNakit', label: 'Finansman Nakit Akışı' },
+    { key: 'donemSonuNakit', label: 'Dönem Sonu Nakit' }
+  ]
+};
+
+function renderFinHistoryTable(containerEl, periods, fields) {
+  const headRow = `<div class="fin-history-row fin-history-row--head"><span>Kalem</span>${periods.map(p => `<span>${escapeHtml(p.period || '—')}</span>`).join('')}</div>`;
+  const rows = fields.map(f => {
+    const cells = periods.map(p => `<span>${Number.isFinite(p[f.key]) ? fmtMn(p[f.key]) : '—'}</span>`).join('');
+    return `<div class="fin-history-row"><span>${escapeHtml(f.label)}</span>${cells}</div>`;
+  }).join('');
+  containerEl.innerHTML = headRow + rows;
+}
+
+function renderFinancialsHistory(c) {
+  if (!els.financialsHistoryPanel) return;
+  const list = Array.isArray(c.financials) ? c.financials.filter(f => f.period) : [];
+  if (list.length < 2) { els.financialsHistoryPanel.hidden = true; return; }
+
+  const sorted = list.slice().sort((a, b) => b.period.localeCompare(a.period));
+  const last5 = sorted.slice(0, 5);
+
+  els.financialsHistoryPanel.hidden = false;
+  renderFinHistoryTable(els.finHistGelir, last5, FIN_HISTORY_GROUPS.gelir);
+  renderFinHistoryTable(els.finHistBilanco, last5, FIN_HISTORY_GROUPS.bilanco);
+  renderFinHistoryTable(els.finHistNakit, last5, FIN_HISTORY_GROUPS.nakit);
+}
 
 function renderFinancialsEntries() {
   if (!els.financialsEntries) return;
@@ -1983,6 +2031,7 @@ function renderDashboard(c) {
       els.finFcfYillik.textContent = Number.isFinite(derived.annualFcf) ? fmtMn(derived.annualFcf) : '—';
     }
   }
+  renderFinancialsHistory(c);
 
   /* Aylık Performans Takibi paneli */
   if (els.monthlyPanel) {
@@ -2381,11 +2430,11 @@ function init() {
       if (!link) return;
       const target = document.getElementById(link.dataset.target);
       if (!target) return;
+      rvShowView('mainWorkspace');
       target.open = true;
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       els.sectionNav.querySelectorAll('.section-nav-link').forEach((el) => el.classList.remove('is-active'));
       link.classList.add('is-active');
-      if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
     });
   }
   /* Dashboard içi sekmeler (Özet / Pozisyon / Mali Tablolar / Sektör / KAP) — sol kenar çubuğundaki "Analiz Görünümü" menüsünden kontrol edilir */
@@ -2393,10 +2442,10 @@ function init() {
     els.dashboardTabsNav.addEventListener('click', (e) => {
       const btn = e.target.closest('.section-nav-link');
       if (!btn) return;
+      rvShowView('analysisView');
       const tab = btn.dataset.tab;
       els.dashboardTabsNav.querySelectorAll('.section-nav-link').forEach((b) => b.classList.toggle('is-active', b === btn));
       document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('is-active', p.dataset.tab === tab));
-      if (appShellEl && window.innerWidth <= 880) appShellEl.classList.remove('sidebar-open');
     });
   }
 
