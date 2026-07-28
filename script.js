@@ -2245,7 +2245,13 @@ function rvSyncSectionNav() {
 }
 
 /* ---------------- Actions ---------------- */
+function ensureMainWorkspaceVisible() {
+  if (els.settingsView && !els.settingsView.hidden) hideSettingsView();
+  if (els.usPortfolioView && !els.usPortfolioView.hidden) hideUsPortfolioView();
+}
+
 function selectCompany(id) {
+  ensureMainWorkspaceVisible();
   state.activeId = id;
   const c = state.companies.find(x => x.id === id);
   els.companyForm.hidden = !c;
@@ -2256,6 +2262,7 @@ function selectCompany(id) {
 }
 
 function startNewCompany() {
+  ensureMainWorkspaceVisible();
   state.activeId = null;
   els.companyForm.hidden = false;
   clearForm();
