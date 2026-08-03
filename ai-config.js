@@ -10,8 +10,7 @@
    duruyor — bkz. AI-KURULUM.md adım 3).
    ============================================================ */
 
-const RV_WORKER_URL = "https://icy-cloud-c0c6.kasim-merkez-02.workers.dev
-";
+const RV_WORKER_URL = "https://icy-cloud-c0c6.kasim-merkez-02.workers.dev";
 
 function rvWorkerConfigured() {
   return typeof RV_WORKER_URL === 'string'
