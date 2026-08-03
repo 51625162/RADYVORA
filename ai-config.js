@@ -1,13 +1,5 @@
 /* ============================================================
    RADYVORA — AI Worker Yapılandırması
-   AI-KURULUM.md dosyasındaki adım 4'te aldığın Cloudflare Worker
-   adresini aşağıya yapıştır. Örnek:
-
-   const RV_WORKER_URL = "https://radyvora-ai.senin-adin.workers.dev";
-
-   Bu adres gizli değildir, olduğu gibi bırakabilirsin (gerçek sır
-   olan Anthropic API anahtarı yalnızca Worker içinde, secret olarak
-   duruyor — bkz. AI-KURULUM.md adım 3).
    ============================================================ */
 
 const RV_WORKER_URL = "https://icy-cloud-c0c6.kasim-merkez-02.workers.dev";
